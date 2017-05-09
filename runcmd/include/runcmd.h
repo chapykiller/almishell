@@ -5,4 +5,4 @@ int runcmd(const char *, int *, const int[]);
 
 void (*runcmd_onexit)(void);
 
-#endif // RUNCMD_H
+#endif

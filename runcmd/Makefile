@@ -1,21 +1,27 @@
 CFLAGS = -Wall -Werror --ansi --pedantic-errors -D_POSIX_C_SOURCE=200809L
+LDFLAGS = -shared
+INCLUDE = -Iinclude
 CC = gcc
 
 ifndef PREFIX
 PREFIX = /usr/local
 endif
 
-all: obj/runcmd.o
-	$(CC) $(CFLAGS) obj/runcmd.o -o bin/runcmd
+.PHONY: all clean install uninstall
+all: lib/libruncmd.so
 
-runcmd.o: src/runcmd.c
-	$(CC) $(CFLAGS) -c src/runcmd.c
+lib/libruncmd.so: obj/runcmd.o
+	$(CC) $(LDFLAGS) -o libruncmd.so obj/runcmd.o
+
+obj/runcmd.o: src/runcmd.c
+	$(CC) $(CFLAGS) -fPIC $(INCLUDE) -c src/runcmd.c -o obj/runcmd.o
 
 clean:
-	rm -rf obj/* bin/*
+	rm -rf obj/* lib/*
 
 install:
-	install -D $(PREFIX) ./{bin,include}
+	install $(PREFIX)/lib ./lib/libruncmd.so
+	install $(PREFIX)/include ./include/runcmd.h
 
-uninstall: $(PREFIX)/bin/runcmd $(PREFIX)/include/runcmd
-	rm -rf $(PREFIX)/bin/runcmd $(PREFIX)/include/runcmd
+uninstall: $(PREFIX)/lib/libruncmd.so
+	rm -rf $^
