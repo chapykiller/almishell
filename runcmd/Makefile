@@ -11,7 +11,7 @@ endif
 all: lib/libruncmd.so
 
 lib/libruncmd.so: obj/runcmd.o
-	$(CC) $(LDFLAGS) -o libruncmd.so obj/runcmd.o
+	$(CC) $(LDFLAGS) -o lib/libruncmd.so obj/runcmd.o
 
 obj/runcmd.o: src/runcmd.c
 	$(CC) $(CFLAGS) -fPIC $(INCLUDE) -c src/runcmd.c -o obj/runcmd.o

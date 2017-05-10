@@ -13,26 +13,37 @@ size_t count_non_space_sequence(const char *str) {
 	if(!str)
 		return 0;
 
+	/* Process command argument */
 	while(str[i] != '\0') {
-		/* Ignore whitespace sequence */
+		/* Ignore whitespace */
 		if(isspace(str[i])) ++i;
-
-		/* Handle string argument, can contain anything between quotes */
-		else if(str[i] == '\"' && (i == 0 || str[i-1] != '\\')) {
-			++i; ++count;
-			while(str[i] != '\0') {
-				if(str[i] == '\"' && (i == 0 || str[i-1] != '\\'))
-				{ ++i; break; }
-				++i;
-			}
-		}
 
 		/* Handle POSIX's Portable Filename Character Set */
 		else if(isalnum(str[i]) || str[i] == '.' || str[i] == '_' || str[i] == '-' || str[i] == '/') {
 			++i; ++count;
 			while(isalnum(str[i]) || str[i] == '.' || str[i] == '_' || str[i] == '-' || str[i] == '/')
 				++i;
+			break;
 		}
+	}
+
+	while(str[i] != '\0') {
+		/* Ignore whitespace sequence */
+		if(isspace(str[i])) ++i;
+
+		/* Handle string argument, can contain anything between quotes */
+		else {
+			++count;
+			if(str[i] == '\"' && (i == 0 || str[i-1] != '\\')) {
+				++i;
+				while(str[i] != '\0') {
+					if(str[i] == '\"' && str[i-1] != '\\')
+					{ ++i; break; }
+					++i;
+				}
+			}
+			else while(!isspace(str[i]) && str[i] != '\0') ++i;
+	  }
 	}
 
 	return count;
@@ -45,37 +56,54 @@ char **extract_program_name_and_arguments(size_t names_count, const char *str, c
 	if(!name_and_args)
 		return NULL;
 
+	/* Process command argument */
 	while(str[i] != '\0') {
-		/* Ignore whitespace sequence */
+		/* Ignore whitespace */
 		if(isspace(str[i])) ++i;
-
-		/* Handle string argument, can contain anything between quotes */
-		else if(str[i] == '\"' && (i == 0 || str[i-1] != '\\')) {
-			seq_begin = i; ++i;
-			while(str[i] != '\0') {
-				if(str[i] == '\"' && (i == 0 || str[i-1] != '\\'))
-				{ ++i; break; }
-				++i;
-			}
-			name_and_args[j] = (char *) malloc(sizeof(char) * (i - seq_begin));
-			++j;
-		}
 
 		/* Handle POSIX's Portable Filename Character Set */
 		else if(isalnum(str[i]) || str[i] == '.' || str[i] == '_' || str[i] == '-' || str[i] == '/') {
 			seq_begin = i; ++i;
 			while(isalnum(str[i]) || str[i] == '.' || str[i] == '_' || str[i] == '-' || str[i] == '/')
 				++i;
+			seq_size = i - seq_begin;
+			name_and_args[j] = (char *) malloc(sizeof(char) * (seq_size + 1));
+			strncpy(name_and_args[j], &str[seq_begin], seq_size);
+			name_and_args[j][seq_size] = '\0';
+			++j;
+			break;
+		}
+	}
+
+	while(str[i] != '\0') {
+		/* Ignore whitespace sequence */
+		if(isspace(str[i])) ++i;
+
+		else if(str[i] != '\0') {
+			seq_begin = i;
+
+			/* Handle string argument, can contain anything between quotes */
+			if(str[i] == '\"' && (i == 0 || str[i-1] != '\\')) {
+				++i;
+				while(str[i] != '\0') {
+					if(str[i] == '\"' && str[i-1] != '\\')
+					{ ++i; break; }
+					++i;
+				}
+			}
+			/* Any argument */
+			else while(str[i] != '\0' && !isspace(str[i])) ++i;
 
 			seq_size = i - seq_begin;
 			name_and_args[j] = (char *) malloc(sizeof(char) * (seq_size + 1));
 			strncpy(name_and_args[j], &str[seq_begin], seq_size);
 			name_and_args[j][seq_size] = '\0';
 			++j;
-		}
+	  }
 	}
 
-	name_and_args[j + 1] = '\0';
+	name_and_args[j] = (char *) malloc(sizeof(char));
+	name_and_args[j][0] = '\0';
 
 	return name_and_args;
 }
