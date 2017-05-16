@@ -10,10 +10,16 @@ endif
 .PHONY: all clean install uninstall
 all: lib/libruncmd.so
 
-lib/libruncmd.so: obj/runcmd.o
+lib:
+	mkdir lib
+
+obj:
+	mkdir obj
+
+lib/libruncmd.so: lib obj/runcmd.o
 	$(CC) $(LDFLAGS) -o lib/libruncmd.so obj/runcmd.o
 
-obj/runcmd.o: src/runcmd.c
+obj/runcmd.o: obj src/runcmd.c
 	$(CC) $(CFLAGS) -fPIC $(INCLUDE) -c src/runcmd.c -o obj/runcmd.o
 
 clean:
