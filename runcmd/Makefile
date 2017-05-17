@@ -8,7 +8,13 @@ PREFIX = /usr/local
 endif
 
 .PHONY: all clean install uninstall
-all: lib/libruncmd.so lib/libruncmd.a
+all: lib obj/runcmd.lo
+	mkdir -p $(PREFIX)
+	mkdir -p $(PREFIX)/include
+	mkdir -p $(PREFIX)/lib
+	libtool --mode=link $(CC) $(CFLAGS) -o lib/libruncmd.la obj/runcmd.lo -rpath $(PREFIX)/lib
+	rm lib/.libs/libruncmd.la
+	cp lib/.libs/* lib/
 
 lib:
 	mkdir lib
@@ -16,24 +22,20 @@ lib:
 obj:
 	mkdir obj
 
-lib/libruncmd.so: lib obj/runcmd.o
-	$(CC) $(LDFLAGS) -o lib/libruncmd.so obj/runcmd.o
-
-lib/libruncmd.a: lib obj/runcmd.o
-	ar -cvq lib/libruncmd.a obj/runcmd.o
-
-obj/runcmd.o: obj src/runcmd.c
-	$(CC) $(CFLAGS) -fPIC $(INCLUDE) -c src/runcmd.c -o obj/runcmd.o
+obj/runcmd.lo: obj src/runcmd.c
+	libtool --mode=compile $(CC) $(CFLAGS) $(INCLUDE) -no-suppress -c src/runcmd.c -o obj/runcmd.lo 
 
 clean:
+	rm -rf lib/.libs/
 	rm -rf obj/* lib/*
 
 install:
 	install ./lib/libruncmd.so $(PREFIX)/lib
 	install ./lib/libruncmd.a $(PREFIX)/lib
+	install ./lib/libruncmd.la $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include/runcmd
 	install ./include/runcmd/runcmd.h $(PREFIX)/include/runcmd
 
-uninstall: $(PREFIX)/lib/libruncmd.so $(PREFIX)/lib/libruncmd.a
-	rm -f $^
+uninstall:
+	rm -f $(PREFIX)/lib/libruncmd.*
 	rm -rf $(PREFIX)/include/runcmd
