@@ -1,6 +1,9 @@
 #include <runcmd.h>
 #include <unistd.h>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -112,10 +115,26 @@ int runcmd(const char *command, int *result, const int io[3]) {
 	/* Extract program name and arguments */
 	size_t names_count = count_non_space_sequence(command);
 	char **name_and_args = (char**) malloc(sizeof(char *) * (names_count + 1));
+	/* PID for storing fork() calls */
+	pid_t pid;
+	int exit_status;
+
 	extract_program_name_and_arguments(names_count, command, name_and_args);
 
-	/* TODO: After fork call exec like this: */
-	execv(name_and_args[0], &name_and_args[1]);
+	pid = fork();
+	if(pid == 0) {
+		execv(name_and_args[0], &name_and_args[1]);
+		free(name_and_args);
+		exit(EXIT_FAILURE);
+	}
+	else if(pid > 0){
+      /*if(BLOCKING_MODE_FLAG)*/
+			waitpid(pid, &exit_status, 0);
+	}
 
-	return 0;
+	if(result)
+		*result = WEXITSTATUS(exit_status);
+
+	free(name_and_args);
+	return pid;
 }
