@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 /* Executes 'command' in a subprocess. Information on the subprocess execution
@@ -20,7 +21,6 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
   	int pid, status;
   	int aux, i, tmp_result;
   	char *args[RCMD_MAXARGS], *p, *cmd;
-
 
   	tmp_result = 0;
 
@@ -38,7 +38,7 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
   	/* Create a subprocess. */
 
   	pid = fork();
-/* TODO  sysfail (pid<0, -1); */
+
 	if(pid < 0)
 	{
 		tmp_result |= EXECFAILSTATUS;
@@ -71,6 +71,16 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
 
   	else				/* Subprocess (child) */
     {
+		if(io != NULL)
+		{
+			if(io[0] != 0)
+				dup2(io[0], STDIN_FILENO);
+			if(io[1] != 1)
+	    		dup2(io[1], STDOUT_FILENO);
+			if(io[2] != 2)
+	    		dup2(io[2], STDERR_FILENO);
+		}
+
       	aux = execvp (args[0], args);
       	free (cmd);
 
