@@ -1,6 +1,6 @@
 CFLAGS = -Wall -Werror --ansi --pedantic-errors -D_POSIX_C_SOURCE=200809L
 LDFLAGS = -shared
-INCLUDE = -Iinclude/runcmd
+INCLUDE = -Iinclude
 CC = gcc
 
 ifndef PREFIX
@@ -23,16 +23,14 @@ obj:
 	mkdir obj
 
 obj/runcmd.lo: obj src/runcmd.c
-	libtool --mode=compile $(CC) $(CFLAGS) $(INCLUDE) -no-suppress -c src/runcmd.c -o obj/runcmd.lo 
+	libtool --mode=compile $(CC) $(CFLAGS) $(INCLUDE) -no-suppress -c src/runcmd.c -o obj/runcmd.lo
 
 clean:
 	rm -rf lib/.libs/
 	rm -rf obj/* lib/*
 
 install:
-	install ./lib/libruncmd.so $(PREFIX)/lib
-	install ./lib/libruncmd.a $(PREFIX)/lib
-	install ./lib/libruncmd.la $(PREFIX)/lib
+	install ./lib/libruncmd* $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include/runcmd
 	install ./include/runcmd/runcmd.h $(PREFIX)/include/runcmd
 
