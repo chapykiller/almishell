@@ -3,10 +3,25 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+/* If function runcmd is called in non-blocking mode, then function
+pointed by rcmd_onexit is asynchronously evoked upon the subprocess
+termination. If this variable points to NULL, no action is performed.
+*/
+
+void (*runcmd_onexit)(void) = NULL;
+
+struct sigaction act, old_act;
+
+void runcmd_adapter(int dummy) {
+    runcmd_onexit();
+    sigaction(SIGCHLD, &old_act, &act);
+}
 
 /* Executes 'command' in a subprocess. Information on the subprocess execution
    is stored in 'result' after its completion, and can be inspected with the
@@ -35,8 +50,13 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
   	while ((i<RCMD_MAXARGS) && (args[i++] = strtok (NULL, RCMD_DELIM)));
   	i--;
 
-  	/* Create a subprocess. */
+    if(!strcmp(args[i-1], "&"))
+    {
+        /* TODO */
+        tmp_result |= NONBLOCK;
+    }
 
+  	/* Create a subprocess. */
   	pid = fork();
 
 	if(pid < 0)
@@ -47,39 +67,49 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
 
   	else if (pid>0)			/* Caller process (parent). */
     {
-        if(!strcmp(args[i-1], "&"))
-        {
-            /* TODO */
-            tmp_result |= NONBLOCK;
-        }
-        else
-        {
+        if(!IS_NONBLOCK(tmp_result)) {
+            aux = wait (&status);
+            /* TODO sysfail (aux<0, -1); */
+            if(aux < 0)
+            {
+            }
 
-        	aux = wait (&status);
-          	/* TODO sysfail (aux<0, -1); */
-    	  	if(aux < 0)
-    	  	{
-    		}
-
-          	/* Collect termination mode. */
-          	if (WIFEXITED(status))
-    		{
-    			if(WEXITSTATUS(status) == 0)
-    			{
-    				tmp_result |= EXECFAILSTATUS;
-    			}
-    			else
-    			{
-    				tmp_result |= WEXITSTATUS(status);
-    				tmp_result |= NORMTERM;
-    				tmp_result |= EXECOK;
-    			}
-    		}
+            /* Collect termination mode. */
+            if (WIFEXITED(status))
+            {
+                if(WEXITSTATUS(status) == 0)
+                {
+                    tmp_result |= EXECFAILSTATUS;
+                }
+                else
+                {
+                    tmp_result |= WEXITSTATUS(status);
+                    tmp_result |= NORMTERM;
+                    tmp_result |= EXECOK;
+                }
+            }
         }
   	}
 
   	else				/* Subprocess (child) */
     {
+        if(IS_NONBLOCK(tmp_result)) {
+            pid = fork();
+            if(pid < 0) {
+                return pid;
+            }
+            else if(pid > 0) {
+                if(runcmd_onexit) {
+                    sigemptyset(&act.sa_mask);
+                    act.sa_handler = runcmd_adapter;
+                    act.sa_flags = 0;
+                    sigaction(SIGCHLD, &act, &old_act);
+                }
+                aux = waitpid(pid, &status, 0);
+                return pid;
+            }
+        }
+
 		if(io != NULL)
 		{
 			if(io[0] != 0)
@@ -105,10 +135,3 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
   	free (p);
   	return pid;			/* Only parent reaches this point. */
 }
-
-/* If function runcmd is called in non-blocking mode, then function
-   pointed by rcmd_onexit is asynchronously evoked upon the subprocess
-   termination. If this variable points to NULL, no action is performed.
-*/
-
-void (*runcmd_onexit)(void) = NULL;

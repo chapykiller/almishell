@@ -29,7 +29,7 @@ clean:
 	rm -rf lib/.libs/
 	rm -rf obj/* lib/*
 
-install:
+install: all
 	install ./lib/libruncmd* $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include/runcmd
 	install ./include/runcmd/runcmd.h $(PREFIX)/include/runcmd
