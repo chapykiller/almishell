@@ -47,26 +47,35 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
 
   	else if (pid>0)			/* Caller process (parent). */
     {
-    	aux = wait (&status);
-      	/* TODO sysfail (aux<0, -1); */
-	  	if(aux < 0)
-	  	{
-		}
+        if(!strcmp(args[i-1], "&"))
+        {
+            /* TODO */
+            tmp_result |= NONBLOCK;
+        }
+        else
+        {
 
-      	/* Collect termination mode. */
-      	if (WIFEXITED(status))
-		{
-			if(WEXITSTATUS(status) == 0)
-			{
-				tmp_result |= EXECFAILSTATUS;
-			}
-			else
-			{
-				tmp_result |= WEXITSTATUS(status);
-				tmp_result |= NORMTERM;
-				tmp_result |= EXECOK;
-			}
-		}
+        	aux = wait (&status);
+          	/* TODO sysfail (aux<0, -1); */
+    	  	if(aux < 0)
+    	  	{
+    		}
+
+          	/* Collect termination mode. */
+          	if (WIFEXITED(status))
+    		{
+    			if(WEXITSTATUS(status) == 0)
+    			{
+    				tmp_result |= EXECFAILSTATUS;
+    			}
+    			else
+    			{
+    				tmp_result |= WEXITSTATUS(status);
+    				tmp_result |= NORMTERM;
+    				tmp_result |= EXECOK;
+    			}
+    		}
+        }
   	}
 
   	else				/* Subprocess (child) */
@@ -74,9 +83,9 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
 		if(io != NULL)
 		{
 			if(io[0] != 0)
-				dup2(io[0], STDIN_FILENO);
+				dup2(io[0], 0);
 			if(io[1] != 1)
-	    		dup2(io[1], STDOUT_FILENO);
+	    		dup2(io[1], 1);
 			if(io[2] != 2)
 	    		dup2(io[2], STDERR_FILENO);
 		}
