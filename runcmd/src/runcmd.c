@@ -1,5 +1,8 @@
 #include <runcmd/runcmd.h>
+
 #include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -48,10 +51,10 @@ void runcmd_adapter(int dummy)
    shall be redirected; if NULL, no redirection is performed. On
    success, returns subprocess' pid; on error, returns 0. */
 
-int runcmd (const char *command, int *result, const int *io) /* ToDO: const char* */
+int runcmd (const char *command, int *result, const int *io)
 {
     int pid, status;
-    int aux, i, tmp_result;
+    int aux, i, tmp_result, pipeErr[2];
     char *args[RCMD_MAXARGS], *p, *cmd;
 
     tmp_result = 0;
@@ -59,7 +62,10 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
     /* Parse arguments to obtain an argv vector. */
 
     cmd = malloc ((strlen (command)+1) * sizeof(char));
-    /* TODO sysfail (!cmd, -1); */
+    if(!cmd) {
+        return -1;
+    }
+
     p = strcpy (cmd, command);
 
     i=0;
@@ -68,11 +74,14 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
     i--;
 
     if(!strcmp(args[i-1], "&")) {
-        /* TODO */
         tmp_result |= NONBLOCK;
     }
 
     setup_signal_handlers();
+
+    if(pipe(pipeErr) < 0) {
+        return -1;
+    }
 
     /* Create a subprocess. */
     pid = fork();
@@ -83,31 +92,42 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
     }
 
     else if (pid>0) {		/* Caller process (parent). */
+        close(pipeErr[1]);
+
         if(!IS_NONBLOCK(tmp_result)) {
             aux = wait (&status);
-            /* TODO sysfail (aux<0, -1); */
             if(aux < 0) {
+                return -1;
+            }
+
+            if(read(pipeErr[0], &errno, sizeof errno)) {
+                *result = EXECFAILSTATUS;
+                return -1;
             }
 
             /* Collect termination mode. */
             if (WIFEXITED(status)) {
-                if(WEXITSTATUS(status) == 0) {
-                    tmp_result |= EXECFAILSTATUS;
-                } else {
-                    tmp_result |= WEXITSTATUS(status);
-                    tmp_result |= NORMTERM;
-                    tmp_result |= EXECOK;
-                }
+                tmp_result |= WEXITSTATUS(status);
+                tmp_result |= NORMTERM;
+                tmp_result |= EXECOK;
             }
         }
+
+        close(pipeErr[0]);
     }
 
     else {			/* Subprocess (child) */
+        close(pipeErr[0]);
+        fcntl(pipeErr[1], F_SETFD, FD_CLOEXEC);
+
         if(IS_NONBLOCK(tmp_result)) {
             pid = fork();
             if(pid < 0) {
                 exit(EXECFAILSTATUS);
             } else if(pid > 0) {
+                close(pipeErr[0]);
+                close(pipeErr[1]);
+
                 aux = waitpid(pid, &status, 0);
                 exit(0);
             }
@@ -123,10 +143,9 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
         }
 
         aux = execvp (args[0], args);
-        free (cmd);
+        write(pipeErr[1], &errno, sizeof errno);
 
-        if(aux < 0)
-            exit (0);
+        free (cmd);
 
         exit (EXECFAILSTATUS);
     }
