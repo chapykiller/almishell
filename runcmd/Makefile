@@ -13,8 +13,6 @@ all: lib obj/runcmd.lo
 	mkdir -p $(PREFIX)/include
 	mkdir -p $(PREFIX)/lib
 	libtool --mode=link $(CC) $(CFLAGS) -o lib/libruncmd.la obj/runcmd.lo -rpath $(PREFIX)/lib
-	rm lib/.libs/libruncmd.la
-	cp lib/.libs/* lib/
 
 lib:
 	mkdir lib
@@ -30,10 +28,10 @@ clean:
 	rm -rf obj/* lib/*
 
 install: all
-	install ./lib/libruncmd* $(PREFIX)/lib
+	libtool --mode=install install lib/libruncmd.la $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include/runcmd
-	install ./include/runcmd/runcmd.h $(PREFIX)/include/runcmd
+	cp include/runcmd/runcmd.h $(PREFIX)/include/runcmd/runcmd.h
 
 uninstall:
-	rm -f $(PREFIX)/lib/libruncmd.*
+	libtool --mode=uninstall rm -f $(PREFIX)/lib/libruncmd.la
 	rm -rf $(PREFIX)/include/runcmd
