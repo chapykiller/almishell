@@ -223,25 +223,25 @@ int main(int argc, char *argv[])
     j.first_process = (struct process *) malloc(sizeof(struct process));
 
     while(run) {
-        printf("%s", prompt_str);
-        fflush(stdout);
-
         j.first_process->io[0] = STDIN_FILENO;
         j.first_process->io[1] = STDOUT_FILENO;
         j.first_process->io[2] = STDERR_FILENO;
 
-        command_line_size = getline(&command_line, &buffer_size, stdin);
+        do {
+            printf("%s", prompt_str);
+            fflush(stdout);
+            command_line_size = getline(&command_line, &buffer_size, stdin);
+        } while(command_line_size == 1);
+        
         command_line[command_line_size-1] = '\0';
-        if(command_line_size > 1) {
-            /* TODO: Handle failure */
+        /* TODO: Handle failure */
 
-            parse_command_line(command_line, &j);
-            /* TODO: Handle invalid command line */
+        parse_command_line(command_line, &j);
+        /* TODO: Handle invalid command line */
 
-            run_job(&shinfo, &j, 1);
+        run_job(&shinfo, &j, 1);
 
-            free(j.first_process->argv);
-        }
+        free(j.first_process->argv);
     }
 
     free(j.first_process);
