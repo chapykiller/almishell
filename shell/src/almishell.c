@@ -1,13 +1,20 @@
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <limits.h>
 #include <termios.h>
-#include <unistd.h>
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 /* Structure representing a process, from glibc manual*/
 struct process {
-    char argv[_POSIX_ARG_MAX];  /* for exec */
+    char **argv;                /* for exec */
     pid_t pid;                  /* process ID */
     char completed;             /* true if process has completed */
     char stopped;               /* true if process has stopped */
@@ -18,7 +25,7 @@ struct process {
 /* Preliminary job representation, for a job with a single process */
 struct job {
     struct process *first_process;
-}
+};
 
 struct shell_info {
     int terminal;
@@ -26,19 +33,6 @@ struct shell_info {
     pid_t pgid;
     struct termios tmodes;
 };
-
-struct process init_process(const char *command_line)
-{
-    struct process p;
-
-    p.io[0] = STDIN_FILENO;
-    p.io[1] = STDOUT_FILENO;
-    p.io[2] = STDERR_FILENO;
-
-    p.completed = 0;
-    p.stopped = 0;
-    command_line
-}
 
 /* Ensures proper shell initialization, making sure the shell is executed in
 foreground, based on
@@ -55,7 +49,7 @@ struct shell_info init_shell()
     if(info.interactive) {
         /* Request access to the terminal until we're on foreground. */
         while (tcgetpgrp (info.terminal) != (info.pgid = getpgrp()))
-            kill(-pgid, SIGTTIN);
+            kill(-info.pgid, SIGTTIN);
 
         /* Ignore interactive and job-control signals.  */
         signal (SIGINT, SIG_IGN);
@@ -76,7 +70,7 @@ struct shell_info init_shell()
         tcsetpgrp(info.terminal, info.pgid);
 
         /* Save default terminal attributes for shell */
-        tcgetattr(info.terminal, &info.tmodes)
+        tcgetattr(info.terminal, &info.tmodes);
     }
 
     return info;
@@ -85,8 +79,9 @@ struct shell_info init_shell()
 /* NOTE: Should be called after fork */
 void run_process(struct shell_info *s, struct process *p, int fg)
 {
+    int i;
     pid_t pid;
-    const std_filenos[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    const int std_filenos[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
 
     if(s->interactive) {
         pid = getpid();
@@ -108,10 +103,10 @@ void run_process(struct shell_info *s, struct process *p, int fg)
     }
 
     /* Set the standard input/output channels of the new process.  */
-    for(int i = 0; i < 3; ++i) {
-        if(p.io[i] != std_filenos[i]) {
-            dup2(p.io[i], std_filenos[i]);
-            close(p.io[i]);
+    for(i = 0; i < 3; ++i) {
+        if(p->io[i] != std_filenos[i]) {
+            dup2(p->io[i], std_filenos[i]);
+            close(p->io[i]);
         }
     }
 
@@ -163,39 +158,76 @@ void run_job(struct shell_info *s, struct job *j, int fg)
         }
     }
 
-    /* TODO: Handler pipes */
+    /* TODO: Handle pipes */
     if(!s->interactive)
         waitpid(pid, &ret_status, 0);
     else if(fg)
-        put_job_in_foreground(j, 0);
+        put_job_in_foreground(s, j, 0);
     /* TODO: Handle background */
 
+}
+
+void parse_command_line(char *command_line, struct job *j) {
+    const char *command_delim = "\t ";
+    char **args = (char **) malloc(_POSIX_ARG_MAX * sizeof(char *));
+    int argc = 0, i;
+    int p_argc = 0;
+    struct process *p = j->first_process;
+
+    args[argc++] = strtok(command_line, command_delim);
+    while( (argc < _POSIX_ARG_MAX) && (args[argc++] = strtok(NULL, command_delim)) );
+
+    p->argv = (char **) malloc(argc * sizeof(char *));
+
+    for(i = 0; i < argc; ++i) {
+        if(args[i][0] == '<') {
+            p->io[0] = open(args[i+1], O_RDONLY);
+            ++i;
+            /* TODO: Handle failure, i+1 == argc and open return */
+        }
+        else if(args[i][0] == '>') {
+            p->io[1] = open(args[i+1], O_WRONLY);
+            ++i;
+            /* TODO: Handle failure, i+1 == argc and open return */
+        }
+        /* TODO: else if(args[i][0] == '&') */
+        /* TODO: else if(args[i][0] == '|') */
+        else {
+            p->argv[p_argc++] = args[i];
+        }
+    }
+
+    p->argv[p_argc] = "";
 }
 
 int main(int argc, char *argv[])
 {
     const char *prompt_str = "$ ";
-    char command_line[_POSIX_ARG_MAX];
+    char *command_line = NULL;
+    size_t buffer_size = 0;
 
     struct shell_info shinfo = init_shell();
     struct job j;
 
-    int run = 1;
+    int run = 1; /* Control the shell main loop */
+
+    j.first_process = (struct process *) malloc(sizeof(struct process));
     while(run) {
         printf("%s", prompt_str);
         fflush(stdout);
 
-        /* TODO: Break on error */
-        read_command_line(command_line);
+        getline(&command_line, &buffer_size, stdin);
+        /* TODO: Handle failure */
 
-        j.first_process = (struct process *) malloc(sizeof(struct process));
-        parse_command_line(command_line, j.first_process);
+        parse_command_line(command_line, &j);
         /* TODO: Handle invalid command line */
 
-        run_job(&shinfo, j, 1);
+        run_job(&shinfo, &j, 1);
 
-        free(j.first_process);
+        free(j.first_process->argv);
     }
+
+    free(j.first_process);
 
     return EXIT_SUCCESS;
 }
