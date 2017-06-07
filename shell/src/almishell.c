@@ -250,6 +250,7 @@ int main(int argc, char *argv[])
     }
 
     free(j.first_process);
+    free(command_line);
 
     return EXIT_SUCCESS;
 }
