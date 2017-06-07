@@ -180,7 +180,7 @@ void parse_command_line(char *command_line, struct job *j) {
     p->argv = (char **) malloc(argc * sizeof(char *));
     argc--;
 
-    for(i = 0; i < argc; ++i) {
+    for(i = 0; args[i]; ++i) {
         if(args[i][0] == '<') {
             p->io[0] = open(args[i+1], O_RDONLY);
             ++i;
@@ -198,7 +198,7 @@ void parse_command_line(char *command_line, struct job *j) {
         }
     }
 
-    p->argv[p_argc] = "";
+    p->argv[p_argc] = (char *) NULL;
 }
 
 int main(int argc, char *argv[])
