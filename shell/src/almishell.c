@@ -184,10 +184,13 @@ void parse_command_line(char *command_line, struct job *j) {
         if(args[i][0] == '<') {
             p->io[0] = open(args[i+1], O_RDONLY);
             ++i;
+            if( p->io[0] < 0)
+                perror("open");
+            /* TODO: Handle open error */
             /* TODO: Handle failure, i+1 == argc and open return */
         }
         else if(args[i][0] == '>') {
-            p->io[1] = open(args[i+1], O_WRONLY);
+            p->io[1] = open(args[i+1], O_WRONLY|O_CREAT, 0666);
             ++i;
             /* TODO: Handle failure, i+1 == argc and open return */
         }
@@ -198,7 +201,9 @@ void parse_command_line(char *command_line, struct job *j) {
         }
     }
 
-    p->argv[p_argc] = "";
+    p->argv[p_argc] = (char*)NULL;
+
+    free(args);
 }
 
 int main(int argc, char *argv[])
