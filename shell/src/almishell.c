@@ -232,14 +232,19 @@ int main(int argc, char *argv[])
             fflush(stdout);
             command_line_size = getline(&command_line, &buffer_size, stdin);
         } while(command_line_size == 1);
-        
+
         command_line[command_line_size-1] = '\0';
         /* TODO: Handle failure */
 
         parse_command_line(command_line, &j);
         /* TODO: Handle invalid command line */
 
-        run_job(&shinfo, &j, 1);
+        if(!strcmp(j.first_process->argv[0], "exit")) {
+            run = 0;
+        }
+        else {
+            run_job(&shinfo, &j, 1);
+        }
 
         free(j.first_process->argv);
     }
