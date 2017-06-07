@@ -178,6 +178,7 @@ void parse_command_line(char *command_line, struct job *j) {
     while( (argc < _POSIX_ARG_MAX) && (args[argc++] = strtok(NULL, command_delim)) );
 
     p->argv = (char **) malloc(argc * sizeof(char *));
+    argc--;
 
     for(i = 0; i < argc; ++i) {
         if(args[i][0] == '<') {
@@ -204,6 +205,7 @@ int main(int argc, char *argv[])
 {
     const char *prompt_str = "$ ";
     char *command_line = NULL;
+    ssize_t command_line_size = 0;
     size_t buffer_size = 0;
 
     struct shell_info shinfo = init_shell();
@@ -216,7 +218,8 @@ int main(int argc, char *argv[])
         printf("%s", prompt_str);
         fflush(stdout);
 
-        getline(&command_line, &buffer_size, stdin);
+        command_line_size = getline(&command_line, &buffer_size, stdin);
+        command_line[command_line_size-1] = '\0';
         /* TODO: Handle failure */
 
         parse_command_line(command_line, &j);
