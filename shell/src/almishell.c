@@ -105,7 +105,9 @@ void run_process(struct shell_info *s, struct process *p, int fg)
     /* Set the standard input/output channels of the new process.  */
     for(i = 0; i < 3; ++i) {
         if(p->io[i] != std_filenos[i]) {
-            dup2(p->io[i], std_filenos[i]);
+            if(dup2(p->io[i], std_filenos[i]) < 0) {
+                perror("dup2");
+            }
             close(p->io[i]);
         }
     }
@@ -219,9 +221,14 @@ int main(int argc, char *argv[])
     int run = 1; /* Control the shell main loop */
 
     j.first_process = (struct process *) malloc(sizeof(struct process));
+
     while(run) {
         printf("%s", prompt_str);
         fflush(stdout);
+
+        j.first_process->io[0] = STDIN_FILENO;
+        j.first_process->io[1] = STDOUT_FILENO;
+        j.first_process->io[2] = STDERR_FILENO;
 
         command_line_size = getline(&command_line, &buffer_size, stdin);
         command_line[command_line_size-1] = '\0';
