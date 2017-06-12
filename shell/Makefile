@@ -2,6 +2,12 @@ CFLAGS = -Wall -Werror --ansi --pedantic-errors -D_POSIX_C_SOURCE=200809L
 INCLUDE = -Iinclude
 CC = gcc
 
+CL = $(wildcard src/*.c) #cpp list
+HL = $(wildcard include/*.h)    #header list
+OL = $(patsubst src/%.c, obj/%.o, $(CL) ) #object
+
+RESULTS_DIR = bin obj
+
 ifndef PREFIX
 PREFIX = /usr/local
 endif
@@ -11,24 +17,23 @@ CFLAGS += -g
 endif
 
 .PHONY: all clean install uninstall
-all: bin obj/almishell.o
-	gcc $(CFLAGS) obj/almishell.o -o bin/main
+all: bin $(OL)
+	gcc $(CFLAGS) $(OL) -o bin/main
 
-bin:
-	mkdir bin
+$(RESULTS_DIR):
+	mkdir -p $@
 
-obj:
-	mkdir obj
+obj/%.o: src/%.c obj; $(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 obj/almishell.o: obj src/almishell.c
 	gcc $(CFLAGS) $(INCLUDE) -c src/almishell.c -o obj/almishell.o
 
 clean:
-	rm -rf obj/* bin/*
+	rm -rf $(RESULTS_DIR)
 
 install: all
 	mkdir -p $(PREFIX)/include/almishell
-	# cp -pr include/ $(PREFIX)/include/almishell
+	cp -pr include/* $(PREFIX)/include/almishell
 	cp -p bin/main $(PREFIX)/bin
 
 uninstall:
