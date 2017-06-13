@@ -15,6 +15,8 @@ struct process {
     int io[3];
 };
 
+struct process *init_process(void);
+
 /* NOTE: Should be called after fork */
 void run_process(struct shell_info *s, struct process *p, int fg);
 

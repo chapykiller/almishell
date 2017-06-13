@@ -5,15 +5,44 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+struct job *init_job() {
+    struct job *j = (struct job *) malloc(sizeof(struct job));
+
+    j->background = 'f';
+    j->first_process = NULL;
+
+    return j;
+}
+
+void delete_job(struct job *j) {
+    struct process_node *current = j->first_process, *next = NULL;
+
+    if(current) {
+        free(current->p->argv[0]); /* Free command line memory */
+
+        while(current->next) {
+            next = current->next;
+            free(current->p->argv); /* Free token location memory */
+            free(current->p);
+            free(current);
+            current = next;
+        }
+
+        free(current);
+    }
+
+    free(j);
+}
+
 void put_job_in_foreground(struct shell_info *s, struct job *j, int cont) {
     int ret_status;
 
     /* Give control access to the shell terminal to the job */
-    tcsetpgrp(s->terminal, j->first_process->pid);
+    tcsetpgrp(s->terminal, j->first_process->p->pid);
 
     /* TODO: If job is being continued */
 
-    waitpid(j->first_process->pid, &ret_status, 0);
+    waitpid(j->first_process->p->pid, &ret_status, 0);
 
     /* Return access to the terminal to the shell */
     tcsetpgrp(s->terminal, s->pgid);
@@ -24,7 +53,7 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, int cont) {
 
 void run_job(struct shell_info *s, struct job *j, int fg)
 {
-    struct process *p = j->first_process;
+    struct process *p = j->first_process->p;
     pid_t pid;
     int ret_status;
 
