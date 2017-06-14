@@ -23,6 +23,8 @@ size_t count_pipes(char *command_line) {
     if(!pipe_pos)
         return 0;
 
+    ++pipe_num;
+
     while( (pipe_pos = strchr(&pipe_pos[1], '|')) )
         ++pipe_num;
 
@@ -79,9 +81,12 @@ struct job *parse_command_line(char *command_line) {
     char **commands = (char **) malloc(sizeof(char *) * command_num);
     struct job *j = init_job();
     struct process_node **next = &j->first_process, *current;
+    commands[i++] = strtok(command_line, command_delim);
+    while( (i < command_num) && (commands[i++] = strtok(NULL, command_delim)) );
 
-    commands[0] = strtok(command_line, command_delim);
+    i = 0;
     while( (i < command_num) && commands[i] ) {
+
         if(i + 1 == command_num && strchr(commands[i], '&'))
             j->background = 'b';
 
@@ -92,8 +97,12 @@ struct job *parse_command_line(char *command_line) {
         *next = current;
         next = &current->next;
 
-        if(++i < command_num)
-            commands[i] = strtok(NULL, command_delim);
+        ++i;
+    }
+
+    if(i < command_num && !commands[i]) {
+        delete_job(j);
+        j = NULL;
     }
 
     free(commands);
@@ -132,7 +141,11 @@ int main(int argc, char *argv[])
         j = parse_command_line(command_line);
         /* TODO: Handle invalid command line */
 
-        if(!strcmp(j->first_process->p->argv[0], "exit")
+        if(!j) {
+            fprintf(stdout, "Syntax Error\n"); /* TODO: Improve error message */
+        }
+
+        else if(!strcmp(j->first_process->p->argv[0], "exit")
             || !strcmp(j->first_process->p->argv[0], "quit")) {
             run = 0;
         }
@@ -141,7 +154,10 @@ int main(int argc, char *argv[])
         }
 
         /* TODO: Handle job list, some running in the background and others not */
-        delete_job(j);
+        if(j) {
+            delete_job(j);
+            j = NULL;
+        }
 
         free(command_line);
         command_line = NULL;

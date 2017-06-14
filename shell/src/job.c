@@ -19,8 +19,11 @@ void delete_job(struct job *j) {
 
     while(current) {
         next = current->next;
-        free(current->p->argv); /* Free token location memory */
-        free(current->p);
+
+        if(current->p->argv)
+            free(current->p->argv); /* Free token location memory */
+        if(current->p)
+            free(current->p);
         free(current);
         current = next;
     }
