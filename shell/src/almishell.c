@@ -19,7 +19,10 @@
 size_t count_pipes(char *command_line)
 {
     size_t pipe_num = 0;
-    char *pipe_pos = command_line;
+    char *pipe_pos = strchr(command_line, '|');
+
+    if(!pipe_pos)
+        return 0;
 
     while( (pipe_pos = strchr(&pipe_pos[1], '|')) )
         ++pipe_num;
@@ -85,11 +88,16 @@ struct job *parse_command_line(char *command_line)
 
         current = (struct process_node *) malloc(sizeof(struct process_node));
         current->p = parse_process(commands[i]);
+        current->next = NULL;
+
         *next = current;
         next = &current->next;
 
-        commands[++i] = strtok(NULL, command_delim);
+        if(++i < command_num)
+            commands[i] = strtok(NULL, command_delim);
     }
+
+    free(commands);
 
     return j;
 }
@@ -108,6 +116,12 @@ int main(int argc, char *argv[])
 
     while(run) {
         do {
+            if(command_line) {
+                free(command_line);
+                command_line = NULL;
+                buffer_size = 0;
+            }
+
             printf("%s", prompt_str);
             fflush(stdout);
             command_line_size = getline(&command_line, &buffer_size, stdin);
@@ -129,7 +143,9 @@ int main(int argc, char *argv[])
         /* TODO: Handle job list, some running in the background and others not */
         delete_job(j);
 
+        free(command_line);
         command_line = NULL;
+        buffer_size = 0;
     }
 
     return EXIT_SUCCESS;
