@@ -38,6 +38,11 @@ struct process *parse_process(char *command) {
     int argc = 0, i, p_argc, fd;
 
     args[argc++] = strtok(command, command_delim);
+    if(!args[0]) {
+        free(p);
+        return NULL;
+    }
+
     while( (argc < _POSIX_ARG_MAX) && (args[argc++] = strtok(NULL, command_delim)) );
 
     p->argv = (char **) malloc(argc-- * sizeof(char *));
@@ -141,19 +146,23 @@ int main(int argc, char *argv[])
         j = parse_command_line(command_line);
         /* TODO: Handle invalid command line */
 
-        if(!j) {
-            fprintf(stdout, "Syntax Error\n"); /* TODO: Improve error message */
+        if(check_processes(j)) {
+
+            if(!j) {
+                fprintf(stdout, "Syntax Error\n"); /* TODO: Improve error message */
+            }
+
+            else if(!strcmp(j->first_process->p->argv[0], "exit")
+                || !strcmp(j->first_process->p->argv[0], "quit")) {
+                run = 0;
+            }
+            else {
+                run_job(&shinfo, j, 1);
+            }
+
+            /* TODO: Handle job list, some running in the background and others not */
         }
 
-        else if(!strcmp(j->first_process->p->argv[0], "exit")
-            || !strcmp(j->first_process->p->argv[0], "quit")) {
-            run = 0;
-        }
-        else {
-            run_job(&shinfo, j, 1);
-        }
-
-        /* TODO: Handle job list, some running in the background and others not */
         if(j) {
             delete_job(j);
             j = NULL;

@@ -20,10 +20,12 @@ void delete_job(struct job *j) {
     while(current) {
         next = current->next;
 
-        if(current->p->argv)
-            free(current->p->argv); /* Free token location memory */
-        if(current->p)
+        if(current->p) {
+            if(current->p->argv)
+                free(current->p->argv); /* Free token location memory */
+                
             free(current->p);
+        }
         free(current);
         current = next;
     }
@@ -79,4 +81,23 @@ void run_job(struct shell_info *s, struct job *j, int fg)
         put_job_in_foreground(s, j, 0);
     /* TODO: Handle background */
 
+}
+
+int check_processes(struct job *j) {
+    struct process_node *current;
+
+    if(!j) {
+        return 1;
+    }
+
+    current = j->first_process;
+
+    while(current) {
+        if(!current->p)
+            return 0;
+
+        current = current->next;
+    }
+
+    return 1;
 }
