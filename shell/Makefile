@@ -13,7 +13,7 @@ PREFIX = /usr/local
 endif
 
 ifdef DEBUG
-CFLAGS += -g
+CFLAGS += -g -fsanitize=undefined
 endif
 
 .PHONY: all clean install uninstall

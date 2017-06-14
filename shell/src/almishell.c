@@ -128,6 +128,8 @@ int main(int argc, char *argv[])
 
         /* TODO: Handle job list, some running in the background and others not */
         delete_job(j);
+
+        command_line = NULL;
     }
 
     return EXIT_SUCCESS;
