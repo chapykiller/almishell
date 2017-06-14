@@ -6,7 +6,8 @@
 #include <process.h>
 
 /* Create process with default values */
-struct process *init_process() {
+struct process *init_process()
+{
     const int io[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
     struct process *p = (struct process *) malloc(sizeof(struct process));
 
@@ -21,7 +22,7 @@ struct process *init_process() {
     return p;
 }
 
-void run_process(struct shell_info *s, struct process *p, int fg)
+void run_process(struct shell_info *s, struct process *p, pid_t pgid, int fg)
 {
     int i;
     pid_t pid;
@@ -30,8 +31,10 @@ void run_process(struct shell_info *s, struct process *p, int fg)
     if(s->interactive) {
         pid = getpid();
 
-        /* Create own process group */
-        setpgid(pid, pid);
+        if(pgid == 0) /* Create own process group */
+            pgid = pid;
+
+        setpgid(pid, pgid);
 
         /* If it should run on the foreground */
         if(fg)

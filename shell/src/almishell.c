@@ -16,7 +16,8 @@
 #include <stdio.h>
 #include <string.h>
 
-size_t count_pipes(char *command_line) {
+size_t count_pipes(char *command_line)
+{
     size_t pipe_num = 0;
     char *pipe_pos = strchr(command_line, '|');
 
@@ -31,7 +32,8 @@ size_t count_pipes(char *command_line) {
     return pipe_num;
 }
 
-struct process *parse_process(char *command) {
+struct process *parse_process(char *command)
+{
     const char *command_delim = "\t ";
     struct process *p = init_process();
     char *args[_POSIX_ARG_MAX];
@@ -59,8 +61,7 @@ struct process *parse_process(char *command) {
                 perror("open");
             else
                 p->io[0] = fd;
-        }
-        else if(args[i][0] == '>') {
+        } else if(args[i][0] == '>') {
             if(i + 1 == argc)
                 continue;
 
@@ -69,8 +70,7 @@ struct process *parse_process(char *command) {
                 perror("open");
             else
                 p->io[1] = fd;
-        }
-        else if(args[i][0] != '&' || args[i][1] != '\0') {
+        } else if(args[i][0] != '&' || args[i][1] != '\0') {
             p->argv[p_argc++] = args[i];
         }
     }
@@ -80,7 +80,8 @@ struct process *parse_process(char *command) {
     return p;
 }
 
-struct job *parse_command_line(char *command_line) {
+struct job *parse_command_line(char *command_line)
+{
     size_t i = 0, command_num = count_pipes(command_line) + 1;
     const char *command_delim = "|";
     char **commands = (char **) malloc(sizeof(char *) * command_num);
@@ -91,7 +92,6 @@ struct job *parse_command_line(char *command_line) {
 
     i = 0;
     while( (i < command_num) && commands[i] ) {
-
         if(i + 1 == command_num && strchr(commands[i], '&'))
             j->background = 'b';
 
@@ -104,6 +104,8 @@ struct job *parse_command_line(char *command_line) {
 
         ++i;
     }
+
+    j->size = command_num;
 
     if(i < command_num && !commands[i]) {
         delete_job(j);
@@ -157,7 +159,7 @@ int main(int argc, char *argv[])
                 run = 0;
             }
             else {
-                run_job(&shinfo, j, 1);
+                launch_job(&shinfo, j, 1);
             }
 
             /* TODO: Handle job list, some running in the background and others not */

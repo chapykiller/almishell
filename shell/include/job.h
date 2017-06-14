@@ -3,6 +3,7 @@
 
 #include <process.h>
 #include <shell.h>
+#include <termios.h>
 
 struct process_node {
     struct process *p;
@@ -13,15 +14,20 @@ struct process_node {
 struct job {
     struct process_node *first_process;
     char background;
+    pid_t pgid;
+    struct termios tmodes;
+    size_t size;
 };
 
 struct job *init_job(void);
 
 void delete_job(struct job *j);
 
+void wait_job(struct job *j);
+
 void put_job_in_foreground(struct shell_info *s, struct job *j, int cont);
 
-void run_job(struct shell_info *s, struct job *j, int fg);
+void launch_job(struct shell_info *s, struct job *j, int foreground);
 
 int check_processes(struct job *j);
 
