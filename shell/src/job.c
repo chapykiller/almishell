@@ -38,8 +38,10 @@ void wait_job(struct job *j)
     size_t terminated = 0;
 
     while(terminated++ < j->size) {
-        if(waitpid(- j->pgid, &status, 0) < 0)
+        if(waitpid(- j->pgid, &status, 0) < 0) {
             perror("waitpid");
+            break;
+        }
     }
 }
 
