@@ -17,18 +17,12 @@ struct job *init_job() {
 void delete_job(struct job *j) {
     struct process_node *current = j->first_process, *next = NULL;
 
-    if(current) {
-        free(current->p->argv[0]); /* Free command line memory */
-
-        while(current->next) {
-            next = current->next;
-            free(current->p->argv); /* Free token location memory */
-            free(current->p);
-            free(current);
-            current = next;
-        }
-
+    while(current) {
+        next = current->next;
+        free(current->p->argv); /* Free token location memory */
+        free(current->p);
         free(current);
+        current = next;
     }
 
     free(j);
