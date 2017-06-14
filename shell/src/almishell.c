@@ -97,6 +97,8 @@ struct job *parse_command_line(char *command_line)
             commands[i] = strtok(NULL, command_delim);
     }
 
+    j->size = command_num;
+
     free(commands);
 
     return j;
