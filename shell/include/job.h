@@ -29,4 +29,6 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, int cont);
 
 void launch_job(struct shell_info *s, struct job *j, int foreground);
 
+int check_processes(struct job *j);
+
 #endif /* JOB_H */
