@@ -39,16 +39,24 @@ void delete_job(struct job *j)
 
 void wait_job(struct job *j)
 {
+    pid_t wait_result;
     int status;
     size_t terminated = 0;
 
-    /* TODO: Fix due to SIGCHLD ignored */
+    /* Temporarily restore SIGCHLD handler */
+    signal (SIGCHLD, SIG_DFL);
+
     while(terminated++ < j->size) {
-        if(waitpid(-1, &status, 0) < 0) {
+        wait_result = waitpid(- j->pgid, &status, 0);
+        if(wait_result < 0) {
             perror("waitpid");
             break;
         }
+        /* TODO: Report child result status */
     }
+
+    /* Disable SIGCHLD handler */
+    signal(SIGCHLD, SIG_IGN);
 }
 
 void signal_continue_job(struct shell_info *s, struct job *j)
