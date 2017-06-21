@@ -27,7 +27,7 @@ void delete_job(struct job *j)
         if(current->p) {
             if(current->p->argv)
                 free(current->p->argv); /* Free token location memory */
-                
+
             free(current->p);
         }
         free(current);
@@ -79,10 +79,9 @@ void launch_job (struct shell_info *s, struct job *j, int foreground)
 {
     struct process_node *node;
     pid_t pid;
-    int mypipe[2], infile;
+    int mypipe[2];
 
     /* TODO: Input redirection for the whole pipe or process ? */
-    infile = j->first_process->p->io[0];
     for (node = j->first_process; node; node = node->next) {
         /* Set up pipes, if necessary.  */
         if (node->next) {
@@ -90,10 +89,13 @@ void launch_job (struct shell_info *s, struct job *j, int foreground)
                 perror ("pipe");
                 exit (1);
             }
-            if(node->p->io[1] != STDOUT_FILENO) {
+
+            /* Abort current process output redirection to file */
+            if(node->p->io[1] != STDOUT_FILENO)
                 close(node->p->io[1]);
-                node->p->io[1] = mypipe[1];
-            }
+
+            /* Redirect output to the pipe */
+            node->p->io[1] = mypipe[1];
         }
 
         /* Fork the child processes.  */
@@ -115,14 +117,20 @@ void launch_job (struct shell_info *s, struct job *j, int foreground)
             }
         }
 
-        /* Clean up after pipes.  */
-        if (infile != j->first_process->p->io[0])
-            close (infile);
+        /* Clean up after pipes. */
+        if(node->next) {
+            close(node->p->io[1]);
 
-        if (node->next)
-            close (node->p->io[1]);
+            /* Abort the next process input redirection to a file */
+            if(node->next->p->io[0] != STDIN_FILENO)
+                close(node->next->p->io[0]);
 
-        infile = mypipe[0];
+            /* Set the next process input as the pipe input */
+            node->next->p->io[0] = mypipe[0];
+        }
+
+        if(node != j->first_process)
+            close(node->p->io[0]);
     }
 
     /* TODO: Inform job launch ? */
@@ -135,7 +143,8 @@ void launch_job (struct shell_info *s, struct job *j, int foreground)
         put_job_in_background (j, 0); */
 }
 
-int check_processes(struct job *j) {
+int check_processes(struct job *j)
+{
     struct process_node *current;
 
     if(!j) {

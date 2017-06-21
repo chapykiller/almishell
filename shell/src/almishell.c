@@ -155,10 +155,9 @@ int main(int argc, char *argv[])
             }
 
             else if(!strcmp(j->first_process->p->argv[0], "exit")
-                || !strcmp(j->first_process->p->argv[0], "quit")) {
+                    || !strcmp(j->first_process->p->argv[0], "quit")) {
                 run = 0;
-            }
-            else {
+            } else {
                 launch_job(&shinfo, j, 1);
             }
 
