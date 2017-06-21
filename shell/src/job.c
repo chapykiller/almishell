@@ -42,8 +42,9 @@ void wait_job(struct job *j)
     int status;
     size_t terminated = 0;
 
+    /* TODO: Fix due to SIGCHLD ignored */
     while(terminated++ < j->size) {
-        if(waitpid(- j->pgid, &status, 0) < 0) {
+        if(waitpid(-1, &status, 0) < 0) {
             perror("waitpid");
             break;
         }
@@ -60,7 +61,10 @@ void signal_continue_job(struct shell_info *s, struct job *j)
 void put_job_in_foreground(struct shell_info *s, struct job *j, int cont)
 {
     /* Give control access to the shell terminal to the job */
-    tcsetpgrp(s->terminal, j->pgid);
+    if(tcsetpgrp(s->terminal, j->pgid) < 0) {
+        perror("tcsetpgrp");
+        return;
+    }
 
     if(cont)
         signal_continue_job(s, j);

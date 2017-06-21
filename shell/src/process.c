@@ -38,7 +38,7 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int fg)
 
         /* If it should run on the foreground */
         if(fg)
-            tcsetpgrp(s->terminal, pid);
+            tcsetpgrp(s->terminal, pgid);
 
         /* Set the handling for job control signals back to the default. */
         signal (SIGINT, SIG_DFL);
