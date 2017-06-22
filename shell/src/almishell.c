@@ -149,23 +149,45 @@ int main(int argc, char *argv[])
         /* TODO: Handle invalid command line */
 
         if(check_processes(j)) {
+            int it;
 
             if(!j) {
                 fprintf(stdout, "Syntax Error\n"); /* TODO: Improve error message */
             }
+            else {
+                for(it = 0; it < shinfo.num_cmd; ++it) {
+                    if(!j->first_process->next
+                        && !strcmp(j->first_process->p->argv[0], shinfo.cmd[it])) {
+                        switch (it) {
+                            case 0: /* exit */
+                            case 1: /* quit */
+                                run = 0;
+                                break;
+                            case 2: /* cd */
+                                if(j->first_process->p->argv[1]) {
+                                    chdir(j->first_process->p->argv[1]);
 
-            else if(!strcmp(j->first_process->p->argv[0], "exit")
-                    || !strcmp(j->first_process->p->argv[0], "quit")) {
-                run = 0;
-            } else if(!strcmp(j->first_process->p->argv[0], "cd")) {
-                if(j->first_process->p->argv[1]) {
-                    chdir(j->first_process->p->argv[1]);
+                                    free(shinfo.current_path);
+                                    shinfo.current_path = getcwd(NULL, 0);
+                                }
+                                break;
+                            case 3: /* jobs */
+                                break;
+                            case 4: /* fg */
+                                break;
+                            case 5: /* bg */
+                                break;
+                            default:
+                                break;
+                        }
 
-                    free(shinfo.current_path);
-                    shinfo.current_path = getcwd(NULL, 0);
+                        it = shinfo.num_cmd + 1;
+                    }
                 }
-            } else {
-                launch_job(&shinfo, j, 1);
+
+                if(it <= shinfo.num_cmd) {
+                    launch_job(&shinfo, j, 1);
+                }
             }
 
             /* TODO: Handle job list, some running in the background and others not */
@@ -181,7 +203,7 @@ int main(int argc, char *argv[])
         buffer_size = 0;
     }
 
-    free(shinfo.current_path);
+    delete_shell(&shinfo);
 
     return EXIT_SUCCESS;
 }
