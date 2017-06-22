@@ -11,6 +11,8 @@ struct shell_info init_shell()
     info.terminal = STDIN_FILENO;
     info.interactive = isatty(info.terminal);
 
+    info.current_path = getcwd(NULL, 0);
+
     /* If the shell is running interactively */
     if(info.interactive) {
         /* Request access to the terminal until we're on foreground. */

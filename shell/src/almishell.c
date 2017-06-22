@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
                 buffer_size = 0;
             }
 
-            printf("%s", prompt_str);
+            printf("[%s]%s", shinfo.current_path, prompt_str);
             fflush(stdout);
             command_line_size = getline(&command_line, &buffer_size, stdin);
         } while(command_line_size < 2);
@@ -157,6 +157,13 @@ int main(int argc, char *argv[])
             else if(!strcmp(j->first_process->p->argv[0], "exit")
                     || !strcmp(j->first_process->p->argv[0], "quit")) {
                 run = 0;
+            } else if(!strcmp(j->first_process->p->argv[0], "cd")) {
+                if(j->first_process->p->argv[1]) {
+                    chdir(j->first_process->p->argv[1]);
+
+                    free(shinfo.current_path);
+                    shinfo.current_path = getcwd(NULL, 0);
+                }
             } else {
                 launch_job(&shinfo, j, 1);
             }
@@ -173,6 +180,8 @@ int main(int argc, char *argv[])
         command_line = NULL;
         buffer_size = 0;
     }
+
+    free(shinfo.current_path);
 
     return EXIT_SUCCESS;
 }

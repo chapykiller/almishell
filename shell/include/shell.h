@@ -8,6 +8,7 @@ struct shell_info {
     int terminal;
     int interactive;
     pid_t pgid;
+    char *current_path;
     struct termios tmodes;
 };
 
