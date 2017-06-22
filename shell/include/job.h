@@ -12,11 +12,13 @@ struct process_node {
 
 /* Preliminary job representation, for a job with a single process */
 struct job {
+    int id;
     struct process_node *first_process;
     char background;
     pid_t pgid;
     struct termios tmodes;
     size_t size;
+    struct job *next;
 };
 
 struct job *init_job(void);
@@ -25,10 +27,16 @@ void delete_job(struct job *j);
 
 void wait_job(struct job *j);
 
-void put_job_in_foreground(struct shell_info *s, struct job *j, int cont);
+void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *first_job, int cont);
 
-void launch_job(struct shell_info *s, struct job *j, int foreground);
+void launch_job(struct shell_info *s, struct job *j, struct job *first_job, int foreground);
 
 int check_processes(struct job *j);
+
+int mark_process_status(pid_t pid, int status, struct job* j);
+
+int job_is_stopped(struct job *j);
+
+int job_is_completed(struct job *j);
 
 #endif /* JOB_H */
