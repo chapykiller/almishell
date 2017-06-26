@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
 
             if(job_is_completed(temp)) {
                 if(temp == first_job)
-                    first_job = *j;
+                    first_job = first_job->next;
 
                 if(previous_job) {
                     previous_job->next = temp->next;

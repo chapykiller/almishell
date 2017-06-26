@@ -45,11 +45,15 @@ void wait_job(struct job *j)
     pid_t wait_result;
     int status;
 
+    signal (SIGCHLD, SIG_DFL);
+
     do {
-        wait_result = waitpid(-1, &status, WUNTRACED);
+        wait_result = waitpid(- j->pgid, &status, WUNTRACED);
     } while(!mark_process_status (wait_result, status, j)
          && !job_is_stopped(j)
          && !job_is_completed(j));
+
+    signal(SIGCHLD, SIG_IGN);
 }
 
 void signal_continue_job(struct shell_info *s, struct job *j)
