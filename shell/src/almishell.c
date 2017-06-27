@@ -128,7 +128,7 @@ void print_prompt(const char *path) {
 }
 
 /* Caller must free the allocated memory */
-char *read_command_line(char *exit_cmd) {
+char *read_command_line() {
     char *command_line = NULL;
     size_t buffer_size = 0;
 
@@ -142,13 +142,13 @@ char *read_command_line(char *exit_cmd) {
 
     free(command_line);
 
-    /* If end of file is reached or CTRL + D is received */
+    /* If end of file is reached or CTRL + D is received, the command is exit */
     if(feof(stdin)) {
         clearerr(stdin);
         printf("\n");
         fflush(stdout);
-        command_line = (char *) malloc(sizeof(char) * (strlen(exit_cmd) + 1));
-        strcpy(command_line, exit_cmd);
+        command_line = (char *) malloc(sizeof(char) * (strlen(shell_cmd[SHELL_EXIT]) + 1));
+        strcpy(command_line, shell_cmd[SHELL_EXIT]);
         return command_line;
     }
 
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 
         do {
             print_prompt(shinfo.current_path);
-            command_line = read_command_line(shinfo.cmd[0]);
+            command_line = read_command_line();
         } while(!command_line);
 
         j = parse_command_line(command_line);
@@ -189,9 +189,9 @@ int main(int argc, char *argv[])
                 printf("Syntax Error\n"); /* TODO: Improve error message */
             }
             else {
-                for(it = 0; it < shinfo.num_cmd; ++it) {
+                for(it = 0; it < SHELL_CMD_NUM; ++it) {
                     if(!j->first_process->next
-                        && !strcmp(j->first_process->p->argv[0], shinfo.cmd[it])) {
+                        && !strcmp(j->first_process->p->argv[0], shell_cmd[it])) {
                         switch (it) {
                             case 0: /* exit */
                             case 1: /* quit */
@@ -215,12 +215,12 @@ int main(int argc, char *argv[])
                                 break;
                         }
 
-                        it = shinfo.num_cmd + 1;
+                        it = SHELL_CMD_NUM + 1;
                         delete_job(j);
                     }
                 }
 
-                if(it <= shinfo.num_cmd) {
+                if(it <= SHELL_CMD_NUM) {
                     if(!first_job) {
                         first_job = tail_job = j;
                     }

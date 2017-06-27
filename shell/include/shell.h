@@ -4,13 +4,23 @@
 #include <unistd.h>
 #include <termios.h>
 
+enum SHELL_CMD {
+    SHELL_EXIT,
+    SHELL_QUIT,
+    SHELL_CD,
+    SHELL_JOBS,
+    SHELL_FG,
+    SHELL_BG,
+    SHELL_CMD_NUM
+};
+
+const char *shell_cmd[SHELL_CMD_NUM];
+
 struct shell_info {
     int terminal;
     int interactive;
     pid_t pgid;
     char *current_path;
-    int num_cmd;
-    char **cmd;
     struct termios tmodes;
 };
 

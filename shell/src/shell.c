@@ -4,6 +4,15 @@
 
 #include <shell.h>
 
+const char *shell_cmd[SHELL_CMD_NUM] = {
+    "exit",
+    "quit",
+    "cd",
+    "jobs",
+    "fg",
+    "bg"
+};
+
 struct shell_info init_shell()
 {
     struct shell_info info;
@@ -13,15 +22,6 @@ struct shell_info init_shell()
     info.interactive = isatty(info.terminal);
 
     info.current_path = getcwd(NULL, 0);
-
-    info.num_cmd = 6;
-    info.cmd = (char**) malloc(info.num_cmd * sizeof(char*));
-    info.cmd[0] = "exit";
-    info.cmd[1] = "quit";
-    info.cmd[2] = "cd";
-    info.cmd[3] = "jobs";
-    info.cmd[4] = "fg";
-    info.cmd[5] = "bg";
 
     /* Setup the sighub handler */
     sact.sa_handler = SIG_IGN;
@@ -59,5 +59,4 @@ struct shell_info init_shell()
 
 void delete_shell(struct shell_info *info) {
     free(info->current_path);
-    free(info->cmd);
 }

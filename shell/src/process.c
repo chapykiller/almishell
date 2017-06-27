@@ -59,13 +59,13 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int fg)
         }
     }
 
-    for(i = 0; i < s->num_cmd; ++i) {
-        if(!strcmp(p->argv[0], s->cmd[i])) {
-            i = s->num_cmd + 1;
+    for(i = 0; i < SHELL_CMD_NUM; ++i) {
+        if(!strcmp(p->argv[0], shell_cmd[i])) {
+            i = SHELL_CMD_NUM + 1;
         }
     }
 
-    if(i >= s->num_cmd + 2) {
+    if(i >= SHELL_CMD_NUM + 2) {
         exit(EXIT_FAILURE);
     }
 
