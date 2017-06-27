@@ -210,7 +210,37 @@ enum SHELL_CMD is_builtin_command(struct job *j)
     return SHELL_NONE;
 }
 
-void run_builtin_command(struct shell_info *sh, char **args, int id)
+void run_jobs(struct job *first_job) {
+    struct job *it = first_job;
+
+    while(it) {
+        printf("[%d] - ", it->id);
+
+        if(job_is_completed(it)) {
+            struct process_node *last = it->first_process;
+
+            /* Loop until variable last holds the last process */
+            while(last->next != NULL)
+                last = last->next;
+
+            printf("Done");
+
+            if(last->p->status != 0)
+                printf("(%d)", last->p->status);
+        }
+        else if(job_is_stopped(it)) {
+            printf("Stopped");
+            /* TODO: Identify the signal that made it stop, like in bash */
+        }
+        else { /* Job is running */
+            printf("Running");
+        }
+
+        it = it->next;
+    }
+}
+
+void run_builtin_command(struct shell_info *sh, struct job *first_job, char **args, int id)
 {
     switch(id) {
     case SHELL_EXIT:
@@ -228,6 +258,7 @@ void run_builtin_command(struct shell_info *sh, char **args, int id)
         break;
 
     case SHELL_JOBS: /* TODO */
+        run_jobs(first_job);
         break;
 
     case SHELL_FG: /* TODO */
@@ -279,7 +310,7 @@ int main(int argc, char *argv[])
 
                     launch_job(&shinfo, j, first_job, 1);
                 } else { /* Built-in command */
-                    run_builtin_command(&shinfo, &j->first_process->p->argv[1], cmd);
+                    run_builtin_command(&shinfo, first_job, &j->first_process->p->argv[1], cmd);
                     delete_job(j);
                 }
             }
