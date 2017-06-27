@@ -54,9 +54,12 @@ struct shell_info init_shell()
         tcgetattr(info.terminal, &info.tmodes);
     }
 
+    info.run = 1;
+
     return info;
 }
 
-void delete_shell(struct shell_info *info) {
+void delete_shell(struct shell_info *info)
+{
     free(info->current_path);
 }

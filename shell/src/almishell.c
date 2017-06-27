@@ -120,7 +120,8 @@ struct job *parse_command_line(char *command_line)
     return j;
 }
 
-void print_prompt(const char *path) {
+void print_prompt(const char *path)
+{
     const char *prompt_str = "$ ";
 
     printf("[%s]%s", path, prompt_str);
@@ -128,7 +129,8 @@ void print_prompt(const char *path) {
 }
 
 /* Caller must free the allocated memory */
-char *read_command_line() {
+char *read_command_line()
+{
     char *command_line = NULL;
     size_t buffer_size = 0;
 
@@ -159,6 +161,86 @@ char *read_command_line() {
     return NULL;
 }
 
+/*  If it's a builtin command, returns its index in the shell_cmd array,
+   else returns -1.
+*/
+
+enum SHELL_CMD is_builtin_command(struct job *j)
+{
+    const char *cmd = j->first_process->p->argv[0];
+
+    if(j->size > 1)
+        return SHELL_NONE;
+
+    switch(cmd[0]) {
+    case 'e':
+        if(strcmp(shell_cmd[SHELL_EXIT], cmd) == 0)
+            return SHELL_EXIT;
+        break;
+
+    case 'q':
+        if(strcmp(shell_cmd[SHELL_QUIT], cmd) == 0)
+            return SHELL_QUIT;
+        break;
+
+    case 'c':
+        if(strcmp(shell_cmd[SHELL_CD], cmd) == 0)
+            return SHELL_CD;
+        break;
+
+    case 'j':
+        if(strcmp(shell_cmd[SHELL_JOBS], cmd) == 0)
+            return SHELL_JOBS;
+        break;
+
+    case 'f':
+        if(strcmp(shell_cmd[SHELL_FG], cmd) == 0)
+            return SHELL_FG;
+        break;
+
+    case 'b':
+        if(strcmp(shell_cmd[SHELL_BG], cmd) == 0)
+            return SHELL_BG;
+        break;
+
+    default:
+        break;
+    }
+
+    return SHELL_NONE;
+}
+
+void run_builtin_command(struct shell_info *sh, char **args, int id)
+{
+    switch(id) {
+    case SHELL_EXIT:
+    case SHELL_QUIT:
+        sh->run = 0;
+        break;
+
+    case SHELL_CD:
+        if(args[1]) {
+            chdir(args[1]);
+
+            free(sh->current_path);
+            sh->current_path = getcwd(NULL, 0);
+        }
+        break;
+
+    case SHELL_JOBS: /* TODO */
+        break;
+
+    case SHELL_FG: /* TODO */
+        break;
+
+    case SHELL_BG: /* TODO */
+        break;
+
+    default: /* TODO: Handle error */
+        break;
+    }
+}
+
 int main(int argc, char *argv[])
 {
     char *command_line = NULL;
@@ -166,12 +248,11 @@ int main(int argc, char *argv[])
     struct shell_info shinfo = init_shell();
     struct job *first_job, *tail_job, *current_job, *previous_job;
 
-    int run = 1; /* Control the shell main loop */
     int job_id = 1;
 
     first_job = tail_job = NULL;
 
-    while(run) {
+    while(shinfo.run) {
         struct job *j;
 
         do {
@@ -183,53 +264,23 @@ int main(int argc, char *argv[])
         j->id = job_id++;
 
         if(check_processes(j)) {
-            int it;
-
             if(!j) {
                 printf("Syntax Error\n"); /* TODO: Improve error message */
-            }
-            else {
-                for(it = 0; it < SHELL_CMD_NUM; ++it) {
-                    if(!j->first_process->next
-                        && !strcmp(j->first_process->p->argv[0], shell_cmd[it])) {
-                        switch (it) {
-                            case 0: /* exit */
-                            case 1: /* quit */
-                                run = 0;
-                                break;
-                            case 2: /* cd */
-                                if(j->first_process->p->argv[1]) {
-                                    chdir(j->first_process->p->argv[1]);
+            } else {
+                enum SHELL_CMD cmd = is_builtin_command(j);
 
-                                    free(shinfo.current_path);
-                                    shinfo.current_path = getcwd(NULL, 0);
-                                }
-                                break;
-                            case 3: /* jobs */
-                                break;
-                            case 4: /* fg */
-                                break;
-                            case 5: /* bg */
-                                break;
-                            default:
-                                break;
-                        }
-
-                        it = SHELL_CMD_NUM + 1;
-                        delete_job(j);
-                    }
-                }
-
-                if(it <= SHELL_CMD_NUM) {
+                if(is_builtin_command(j) == SHELL_NONE) {
                     if(!first_job) {
                         first_job = tail_job = j;
-                    }
-                    else {
+                    } else {
                         tail_job->next = j;
                         tail_job = j;
                     }
 
                     launch_job(&shinfo, j, first_job, 1);
+                } else { /* Built-in command */
+                    run_builtin_command(&shinfo, &j->first_process->p->argv[1], cmd);
+                    delete_job(j);
                 }
             }
 
@@ -245,13 +296,11 @@ int main(int argc, char *argv[])
                     delete_job(current_job);
                     current_job = first_job = tail_job = NULL;
                     job_id = 1;
-                }
-                else if(current_job == first_job) {
+                } else if(current_job == first_job) {
                     first_job = current_job->next;
                     delete_job(current_job);
                     current_job = first_job;
-                }
-                else if(current_job == tail_job) {
+                } else if(current_job == tail_job) {
                     struct job *temp_j = first_job;
 
                     while(temp_j->next != tail_job);
@@ -260,8 +309,7 @@ int main(int argc, char *argv[])
                     delete_job(current_job);
 
                     current_job = NULL;
-                }
-                else {
+                } else {
                     previous_job->next = current_job->next;
                     delete_job(current_job);
                 }

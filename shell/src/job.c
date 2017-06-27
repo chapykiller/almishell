@@ -50,8 +50,8 @@ void wait_job(struct job *j, struct job *first_job)
     do {
         wait_result = waitpid(- j->pgid, &status, WUNTRACED);
     } while(!mark_process_status (wait_result, status, first_job)
-         && !job_is_stopped(j)
-         && !job_is_completed(j));
+            && !job_is_stopped(j)
+            && !job_is_completed(j));
 
     /*signal(SIGCHLD, SIG_IGN);*/
 }
@@ -146,8 +146,7 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
 
     if (!s->interactive) {
         wait_job (j, first_job);
-    }
-    else if (foreground) {
+    } else if (foreground) {
         put_job_in_foreground(s, j, first_job, 0);
     }
     /* TODO: else
@@ -174,25 +173,23 @@ int check_processes(struct job *j)
     return 1;
 }
 
-int mark_process_status (pid_t pid, int status, struct job* j) {
+int mark_process_status (pid_t pid, int status, struct job* j)
+{
     struct process_node *node;
 
-    if (pid > 0)
-    {
+    if (pid > 0) {
         /* Update the record for the process.  */
         for (; j; j = j->next) {
             for (node = j->first_process; node; node = node->next) {
-                if (node->p->pid == pid)
-                {
+                if (node->p->pid == pid) {
                     node->p->status = status;
                     if (WIFSTOPPED (status))
                         node->p->stopped = 1;
-                    else
-                    {
+                    else {
                         node->p->completed = 1;
                         if (WIFSIGNALED (status))
                             fprintf (stderr, "%d: Terminated by signal %d.\n",
-                                (int) pid, WTERMSIG (node->p->status));
+                                     (int) pid, WTERMSIG (node->p->status));
                     }
                     return 0;
                 }
@@ -200,8 +197,7 @@ int mark_process_status (pid_t pid, int status, struct job* j) {
         }
         fprintf (stderr, "No child process %d.\n", pid);
         return -1;
-    }
-    else if (pid == 0 || errno == ECHILD)
+    } else if (pid == 0 || errno == ECHILD)
         /* No processes ready to report.  */
         return -1;
     else {

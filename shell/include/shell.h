@@ -11,7 +11,8 @@ enum SHELL_CMD {
     SHELL_JOBS,
     SHELL_FG,
     SHELL_BG,
-    SHELL_CMD_NUM
+    SHELL_CMD_NUM,
+    SHELL_NONE
 };
 
 const char *shell_cmd[SHELL_CMD_NUM];
@@ -22,6 +23,7 @@ struct shell_info {
     pid_t pgid;
     char *current_path;
     struct termios tmodes;
+    int run;
 };
 
 /* Ensures proper shell initialization, making sure the shell is executed in
