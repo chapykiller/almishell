@@ -303,7 +303,8 @@ int main(int argc, char *argv[])
                 } else if(current_job == tail_job) {
                     struct job *temp_j = first_job;
 
-                    while(temp_j->next != tail_job);
+                    while(temp_j->next != tail_job)
+                        temp_j = temp_j->next;
                     tail_job = temp_j;
 
                     delete_job(current_job);
