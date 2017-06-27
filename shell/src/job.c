@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 struct job *init_job()
 {
@@ -13,6 +14,8 @@ struct job *init_job()
     j->first_process = NULL;
     j->pgid = 0;
     j->size = 0;
+
+    j->next = NULL;
 
     return j;
 }
@@ -41,21 +44,15 @@ void wait_job(struct job *j)
 {
     pid_t wait_result;
     int status;
-    size_t terminated = 0;
 
-    /* Temporarily restore SIGCHLD handler */
     signal (SIGCHLD, SIG_DFL);
 
-    while(terminated++ < j->size) {
-        wait_result = waitpid(- j->pgid, &status, 0);
-        if(wait_result < 0) {
-            perror("waitpid");
-            break;
-        }
-        /* TODO: Report child result status */
-    }
+    do {
+        wait_result = waitpid(- j->pgid, &status, WUNTRACED);
+    } while(!mark_process_status (wait_result, status, j)
+         && !job_is_stopped(j)
+         && !job_is_completed(j));
 
-    /* Disable SIGCHLD handler */
     signal(SIGCHLD, SIG_IGN);
 }
 
@@ -66,7 +63,7 @@ void signal_continue_job(struct shell_info *s, struct job *j)
         perror("kill (SIGCONT)");
 }
 
-void put_job_in_foreground(struct shell_info *s, struct job *j, int cont)
+void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *first_job, int cont)
 {
     /* Give control access to the shell terminal to the job */
     if(tcsetpgrp(s->terminal, j->pgid) < 0) {
@@ -77,7 +74,7 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, int cont)
     if(cont)
         signal_continue_job(s, j);
 
-    wait_job(j);
+    wait_job(first_job);
 
     /* Give access to the terminal back to the shell */
     tcsetpgrp(s->terminal, s->pgid);
@@ -87,7 +84,7 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, int cont)
     tcsetattr(s->terminal, TCSADRAIN, &s->tmodes);
 }
 
-void launch_job (struct shell_info *s, struct job *j, int foreground)
+void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int foreground)
 {
     struct process_node *node;
     pid_t pid;
@@ -147,10 +144,12 @@ void launch_job (struct shell_info *s, struct job *j, int foreground)
 
     /* TODO: Inform job launch ? */
 
-    if (!s->interactive)
-        wait_job (j);
-    else if (foreground)
-        put_job_in_foreground(s, j, 0);
+    if (!s->interactive) {
+        wait_job (first_job);
+    }
+    else if (foreground) {
+        put_job_in_foreground(s, j, first_job, 0);
+    }
     /* TODO: else
         put_job_in_background (j, 0); */
 }
@@ -172,5 +171,64 @@ int check_processes(struct job *j)
         current = current->next;
     }
 
+    return 1;
+}
+
+int mark_process_status (pid_t pid, int status, struct job* j) {
+    struct process_node *node;
+
+    if (pid > 0)
+    {
+        /* Update the record for the process.  */
+        for (; j; j = j->next) {
+            for (node = j->first_process; node; node = node->next) {
+                if (node->p->pid == pid)
+                {
+                    node->p->status = status;
+                    if (WIFSTOPPED (status))
+                        node->p->stopped = 1;
+                    else
+                    {
+                        node->p->completed = 1;
+                        if (WIFSIGNALED (status))
+                            fprintf (stderr, "%d: Terminated by signal %d.\n",
+                                (int) pid, WTERMSIG (node->p->status));
+                    }
+                    return 0;
+                }
+            }
+        }
+        fprintf (stderr, "No child process %d.\n", pid);
+        return -1;
+    }
+    else if (pid == 0 || errno == ECHILD)
+        /* No processes ready to report.  */
+        return -1;
+    else {
+        /* Other weird errors.  */
+        perror ("waitpid");
+        return -1;
+    }
+}
+
+/* Return true if all processes in the job have stopped or completed.  */
+int job_is_stopped (struct job *j)
+{
+    struct process_node *node;
+
+    for (node = j->first_process; node; node = node->next)
+        if (!node->p->completed && !node->p->stopped)
+            return 0;
+    return 1;
+}
+
+/* Return true if all processes in the job have completed.  */
+int job_is_completed (struct job *j)
+{
+    struct process_node *node;
+
+    for (node = j->first_process; node; node = node->next)
+        if (!node->p->completed)
+            return 0;
     return 1;
 }

@@ -8,13 +8,16 @@
 
 #include <fcntl.h>
 #include <unistd.h>
-
 #include <limits.h>
 #include <termios.h>
+#include <signal.h>
+#include <errno.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <readline/readline.h>
 
 size_t count_pipes(char *command_line)
 {
@@ -117,6 +120,9 @@ struct job *parse_command_line(char *command_line)
     return j;
 }
 
+void handle_signal(int signal) {
+}
+
 int main(int argc, char *argv[])
 {
     const char *prompt_str = "$ ";
@@ -125,54 +131,143 @@ int main(int argc, char *argv[])
     size_t buffer_size = 0;
 
     struct shell_info shinfo = init_shell();
-    struct job *j;
+    struct job *first_job, **j, *current_job, *previous_job;
+    struct sigaction sact;
 
     int run = 1; /* Control the shell main loop */
+    int job_id = 1;
+
+    /* Setup the sighub handler */
+    sact.sa_handler = &handle_signal;
+
+    /* Intercept SIGINT */
+    if (sigaction(SIGINT, &sact, NULL) == -1) {
+        perror("Error: cannot handle SIGINT\n"); /* Should not happen */
+    }
+    /* Intercept SIGQUIT */
+    if (sigaction(SIGQUIT, &sact, NULL) == -1) {
+        perror("Error: cannot handle SIGQUIT\n"); /* Should not happen */
+    }
+    /* Intercept SIGTSTP */
+    if (sigaction(SIGTSTP, &sact, NULL) == -1) {
+        perror("Error: cannot handle SIGTSTP\n"); /* Should not happen */
+    }
+
+    j = &first_job;
 
     while(run) {
         do {
             if(command_line) {
                 free(command_line);
-                command_line = NULL;
-                buffer_size = 0;
             }
+            command_line = NULL;
+            buffer_size = 0;
 
-            printf("%s", prompt_str);
+            printf("[%s]%s", shinfo.current_path, prompt_str);
             fflush(stdout);
             command_line_size = getline(&command_line, &buffer_size, stdin);
+
+            /* Close the shell when receive End of Transmission */
+            if(command_line_size < 0) {
+                int isEOT = !errno;
+
+                clearerr(stdin);
+                printf("\n");
+                fflush(stdout);
+
+                if(isEOT) {
+                    free(command_line);
+
+                    command_line_size = strlen(shinfo.cmd[0]) + 2;
+                    command_line = (char*) malloc(command_line_size * sizeof(char));
+
+                    strcpy(command_line, shinfo.cmd[0]);
+                }
+            }
         } while(command_line_size < 2);
 
         command_line[--command_line_size] = '\0';
         /* TODO: Handle failure */
 
-        j = parse_command_line(command_line);
-        /* TODO: Handle invalid command line */
+        *j = parse_command_line(command_line);
+        (*j)->id = job_id++;
 
-        if(check_processes(j)) {
+        if(check_processes(*j)) {
+            int it;
 
-            if(!j) {
-                fprintf(stdout, "Syntax Error\n"); /* TODO: Improve error message */
+            if(!*j) {
+                printf("Syntax Error\n"); /* TODO: Improve error message */
             }
+            else {
+                for(it = 0; it < shinfo.num_cmd; ++it) {
+                    if(!(*j)->first_process->next
+                        && !strcmp((*j)->first_process->p->argv[0], shinfo.cmd[it])) {
+                        switch (it) {
+                            case 0: /* exit */
+                            case 1: /* quit */
+                                run = 0;
+                                break;
+                            case 2: /* cd */
+                                if((*j)->first_process->p->argv[1]) {
+                                    chdir((*j)->first_process->p->argv[1]);
 
-            else if(!strcmp(j->first_process->p->argv[0], "exit")
-                    || !strcmp(j->first_process->p->argv[0], "quit")) {
-                run = 0;
-            } else {
-                launch_job(&shinfo, j, 1);
+                                    free(shinfo.current_path);
+                                    shinfo.current_path = getcwd(NULL, 0);
+                                }
+                                break;
+                            case 3: /* jobs */
+                                break;
+                            case 4: /* fg */
+                                break;
+                            case 5: /* bg */
+                                break;
+                            default:
+                                break;
+                        }
+
+                        it = shinfo.num_cmd + 1;
+                    }
+                }
+
+                if(it <= shinfo.num_cmd) {
+                    launch_job(&shinfo, *j, first_job, 1);
+                }
+
+                j = &((*j)->next);
             }
 
             /* TODO: Handle job list, some running in the background and others not */
         }
 
-        if(j) {
-            delete_job(j);
-            j = NULL;
+        current_job = first_job;
+        previous_job = NULL;
+        while(current_job) {
+            struct job *temp;
+
+            temp = current_job;
+            current_job = current_job->next;
+
+            if(job_is_completed(temp)) {
+                if(temp == first_job)
+                    first_job = first_job->next;
+
+                if(previous_job) {
+                    previous_job->next = temp->next;
+                }
+
+                delete_job(temp);
+                temp = previous_job;
+            }
+
+            previous_job = temp;
         }
 
         free(command_line);
         command_line = NULL;
         buffer_size = 0;
     }
+
+    delete_shell(&shinfo);
 
     return EXIT_SUCCESS;
 }
