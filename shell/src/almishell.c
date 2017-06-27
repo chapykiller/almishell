@@ -269,7 +269,7 @@ int main(int argc, char *argv[])
             } else {
                 enum SHELL_CMD cmd = is_builtin_command(j);
 
-                if(is_builtin_command(j) == SHELL_NONE) {
+                if(cmd == SHELL_NONE) {
                     if(!first_job) {
                         first_job = tail_job = j;
                     } else {
