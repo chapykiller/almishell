@@ -74,7 +74,8 @@ struct process *parse_process(char *command)
             else
                 p->io[1] = fd;
         } else if(args[i][0] != '&' || args[i][1] != '\0') {
-            p->argv[p_argc++] = args[i];
+            p->argv[p_argc] = (char*) malloc(strlen(args[i]) * sizeof(char));
+            strcpy(p->argv[p_argc++], args[i]);
         }
     }
 
@@ -237,6 +238,7 @@ void run_jobs(struct job *first_job) {
         }
 
         it = it->next;
+        printf("\n");
     }
 }
 
@@ -279,8 +281,6 @@ int main(int argc, char *argv[])
     struct shell_info shinfo = init_shell();
     struct job *first_job, *tail_job, *current_job, *previous_job;
 
-    int job_id = 1;
-
     first_job = tail_job = NULL;
 
     while(shinfo.run) {
@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
         } while(!command_line);
 
         j = parse_command_line(command_line);
-        j->id = job_id++;
+        j->id = tail_job ? tail_job->id+1 : 1;
 
         if(check_processes(j)) {
             if(!j) {
@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
 
                     launch_job(&shinfo, j, first_job, 1);
                 } else { /* Built-in command */
-                    run_builtin_command(&shinfo, first_job, &j->first_process->p->argv[1], cmd);
+                    run_builtin_command(&shinfo, first_job, j->first_process->p->argv, cmd);
                     delete_job(j);
                 }
             }
@@ -326,19 +326,16 @@ int main(int argc, char *argv[])
                 if(first_job == tail_job) {
                     delete_job(current_job);
                     current_job = first_job = tail_job = NULL;
-                    job_id = 1;
                 } else if(current_job == first_job) {
                     first_job = current_job->next;
                     delete_job(current_job);
                     current_job = first_job;
                 } else if(current_job == tail_job) {
-                    struct job *temp_j = first_job;
-
-                    while(temp_j->next != tail_job)
-                        temp_j = temp_j->next;
-                    tail_job = temp_j;
+                    tail_job = previous_job;
 
                     delete_job(current_job);
+
+                    previous_job->next = NULL;
 
                     current_job = NULL;
                 } else {
