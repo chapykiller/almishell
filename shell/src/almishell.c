@@ -120,74 +120,59 @@ struct job *parse_command_line(char *command_line)
     return j;
 }
 
-void handle_signal(int signal) {
+void print_prompt(const char *path) {
+    const char *prompt_str = "$ ";
+
+    printf("[%s]%s", path, prompt_str);
+    fflush(stdout);
+}
+
+/* Caller must free the allocated memory */
+char *read_command_line(char *exit_cmd) {
+    char *command_line = NULL;
+    size_t buffer_size = 0;
+
+    ssize_t command_line_size = getline(&command_line, &buffer_size, stdin);
+
+    /* If there's at least one character other than newline */
+    if(command_line_size > 1) {
+        command_line[--command_line_size] = '\0'; /* Remove the newline char */
+        return command_line;
+    }
+
+    free(command_line);
+
+    /* If end of file is reached or CTRL + D is received */
+    if(feof(stdin)) {
+        clearerr(stdin);
+        command_line = (char *) malloc(sizeof(char) * (strlen(exit_cmd) + 1));
+        strcpy(command_line, exit_cmd);
+        return command_line;
+    }
+
+    /* TODO: Handle error */
+    if(command_line_size == -1)
+        perror("getline");
+
+    return NULL;
 }
 
 int main(int argc, char *argv[])
 {
-    const char *prompt_str = "$ ";
     char *command_line = NULL;
-    ssize_t command_line_size = 0;
-    size_t buffer_size = 0;
 
     struct shell_info shinfo = init_shell();
-    struct job *first_job, **j, *current_job, *previous_job;
-    struct sigaction sact;
+    struct job *first_job, *current_job, *previous_job;
+    struct job **j = &first_job;
 
     int run = 1; /* Control the shell main loop */
     int job_id = 1;
 
-    /* Setup the sighub handler */
-    sact.sa_handler = &handle_signal;
-
-    /* Intercept SIGINT */
-    if (sigaction(SIGINT, &sact, NULL) == -1) {
-        perror("Error: cannot handle SIGINT\n"); /* Should not happen */
-    }
-    /* Intercept SIGQUIT */
-    if (sigaction(SIGQUIT, &sact, NULL) == -1) {
-        perror("Error: cannot handle SIGQUIT\n"); /* Should not happen */
-    }
-    /* Intercept SIGTSTP */
-    if (sigaction(SIGTSTP, &sact, NULL) == -1) {
-        perror("Error: cannot handle SIGTSTP\n"); /* Should not happen */
-    }
-
-    j = &first_job;
-
     while(run) {
         do {
-            if(command_line) {
-                free(command_line);
-            }
-            command_line = NULL;
-            buffer_size = 0;
-
-            printf("[%s]%s", shinfo.current_path, prompt_str);
-            fflush(stdout);
-            command_line_size = getline(&command_line, &buffer_size, stdin);
-
-            /* Close the shell when receive End of Transmission */
-            if(command_line_size < 0) {
-                int isEOT = !errno;
-
-                clearerr(stdin);
-                printf("\n");
-                fflush(stdout);
-
-                if(isEOT) {
-                    free(command_line);
-
-                    command_line_size = strlen(shinfo.cmd[0]) + 2;
-                    command_line = (char*) malloc(command_line_size * sizeof(char));
-
-                    strcpy(command_line, shinfo.cmd[0]);
-                }
-            }
-        } while(command_line_size < 2);
-
-        command_line[--command_line_size] = '\0';
-        /* TODO: Handle failure */
+            print_prompt(shinfo.current_path);
+            command_line = read_command_line(shinfo.cmd[0]);
+        } while(!command_line);
 
         *j = parse_command_line(command_line);
         (*j)->id = job_id++;
@@ -262,9 +247,11 @@ int main(int argc, char *argv[])
             previous_job = temp;
         }
 
-        free(command_line);
-        command_line = NULL;
-        buffer_size = 0;
+
+        if(command_line) {
+            free(command_line);
+            command_line = NULL;
+        }
     }
 
     delete_shell(&shinfo);
