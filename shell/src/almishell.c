@@ -145,13 +145,15 @@ char *read_command_line(char *exit_cmd) {
     /* If end of file is reached or CTRL + D is received */
     if(feof(stdin)) {
         clearerr(stdin);
+        printf("\n");
+        fflush(stdout);
         command_line = (char *) malloc(sizeof(char) * (strlen(exit_cmd) + 1));
         strcpy(command_line, exit_cmd);
         return command_line;
     }
 
     /* TODO: Handle error */
-    if(command_line_size == -1)
+    if(command_line_size < 0)
         perror("getline");
 
     return NULL;
@@ -162,39 +164,42 @@ int main(int argc, char *argv[])
     char *command_line = NULL;
 
     struct shell_info shinfo = init_shell();
-    struct job *first_job, *current_job, *previous_job;
-    struct job **j = &first_job;
+    struct job *first_job, *tail_job, *current_job, *previous_job;
 
     int run = 1; /* Control the shell main loop */
     int job_id = 1;
 
+    first_job = tail_job = NULL;
+
     while(run) {
+        struct job *j;
+
         do {
             print_prompt(shinfo.current_path);
             command_line = read_command_line(shinfo.cmd[0]);
         } while(!command_line);
 
-        *j = parse_command_line(command_line);
-        (*j)->id = job_id++;
+        j = parse_command_line(command_line);
+        j->id = job_id++;
 
-        if(check_processes(*j)) {
+        if(check_processes(j)) {
             int it;
 
-            if(!*j) {
+            if(!j) {
                 printf("Syntax Error\n"); /* TODO: Improve error message */
             }
             else {
                 for(it = 0; it < shinfo.num_cmd; ++it) {
-                    if(!(*j)->first_process->next
-                        && !strcmp((*j)->first_process->p->argv[0], shinfo.cmd[it])) {
+                    if(!j->first_process->next
+                        && !strcmp(j->first_process->p->argv[0], shinfo.cmd[it])) {
                         switch (it) {
                             case 0: /* exit */
                             case 1: /* quit */
                                 run = 0;
                                 break;
                             case 2: /* cd */
-                                if((*j)->first_process->p->argv[1]) {
-                                    chdir((*j)->first_process->p->argv[1]);
+                                if(j->first_process->p->argv[1]) {
+                                    chdir(j->first_process->p->argv[1]);
 
                                     free(shinfo.current_path);
                                     shinfo.current_path = getcwd(NULL, 0);
@@ -211,14 +216,21 @@ int main(int argc, char *argv[])
                         }
 
                         it = shinfo.num_cmd + 1;
+                        delete_job(j);
                     }
                 }
 
                 if(it <= shinfo.num_cmd) {
-                    launch_job(&shinfo, *j, first_job, 1);
-                }
+                    if(!first_job) {
+                        first_job = tail_job = j;
+                    }
+                    else {
+                        tail_job->next = j;
+                        tail_job = j;
+                    }
 
-                j = &((*j)->next);
+                    launch_job(&shinfo, j, first_job, 1);
+                }
             }
 
             /* TODO: Handle job list, some running in the background and others not */
@@ -226,25 +238,37 @@ int main(int argc, char *argv[])
 
         current_job = first_job;
         previous_job = NULL;
+
         while(current_job) {
-            struct job *temp;
-
-            temp = current_job;
-            current_job = current_job->next;
-
-            if(job_is_completed(temp)) {
-                if(temp == first_job)
-                    first_job = first_job->next;
-
-                if(previous_job) {
-                    previous_job->next = temp->next;
+            if(job_is_completed(current_job)) {
+                if(first_job == tail_job) {
+                    delete_job(current_job);
+                    current_job = first_job = tail_job = NULL;
+                    job_id = 1;
                 }
+                else if(current_job == first_job) {
+                    first_job = current_job->next;
+                    delete_job(current_job);
+                    current_job = first_job;
+                }
+                else if(current_job == tail_job) {
+                    struct job *temp_j = first_job;
 
-                delete_job(temp);
-                temp = previous_job;
+                    while(temp_j->next != tail_job);
+                    tail_job = temp_j;
+
+                    delete_job(current_job);
+
+                    current_job = NULL;
+                }
+                else {
+                    previous_job->next = current_job->next;
+                    delete_job(current_job);
+                }
             }
-
-            previous_job = temp;
+            previous_job = current_job;
+            if(current_job)
+                current_job = current_job->next;
         }
 
 

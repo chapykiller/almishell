@@ -40,20 +40,20 @@ void delete_job(struct job *j)
     free(j);
 }
 
-void wait_job(struct job *j)
+void wait_job(struct job *j, struct job *first_job)
 {
     pid_t wait_result;
     int status;
 
-    signal (SIGCHLD, SIG_DFL);
+    /*signal (SIGCHLD, SIG_DFL);*/
 
     do {
         wait_result = waitpid(- j->pgid, &status, WUNTRACED);
-    } while(!mark_process_status (wait_result, status, j)
+    } while(!mark_process_status (wait_result, status, first_job)
          && !job_is_stopped(j)
          && !job_is_completed(j));
 
-    signal(SIGCHLD, SIG_IGN);
+    /*signal(SIGCHLD, SIG_IGN);*/
 }
 
 void signal_continue_job(struct shell_info *s, struct job *j)
@@ -74,7 +74,7 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *firs
     if(cont)
         signal_continue_job(s, j);
 
-    wait_job(first_job);
+    wait_job(j, first_job);
 
     /* Give access to the terminal back to the shell */
     tcsetpgrp(s->terminal, s->pgid);
@@ -145,7 +145,7 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
     /* TODO: Inform job launch ? */
 
     if (!s->interactive) {
-        wait_job (first_job);
+        wait_job (j, first_job);
     }
     else if (foreground) {
         put_job_in_foreground(s, j, first_job, 0);

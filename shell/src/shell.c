@@ -7,6 +7,7 @@
 struct shell_info init_shell()
 {
     struct shell_info info;
+    struct sigaction sact;
 
     info.terminal = STDIN_FILENO;
     info.interactive = isatty(info.terminal);
@@ -22,6 +23,9 @@ struct shell_info init_shell()
     info.cmd[4] = "fg";
     info.cmd[5] = "bg";
 
+    /* Setup the sighub handler */
+    sact.sa_handler = SIG_IGN;
+
     /* If the shell is running interactively */
     if(info.interactive) {
         /* Request access to the terminal until we're on foreground. */
@@ -29,12 +33,12 @@ struct shell_info init_shell()
             kill(-info.pgid, SIGTTIN);
 
         /* Ignore interactive and job-control signals.  */
-        signal (SIGINT, SIG_IGN);
-        signal (SIGQUIT, SIG_IGN);
-        signal (SIGTSTP, SIG_IGN);
-        signal (SIGTTIN, SIG_IGN);
-        signal (SIGTTOU, SIG_IGN);
-        signal (SIGCHLD, SIG_IGN);
+        sigaction(SIGINT, &sact, NULL);
+        sigaction(SIGQUIT, &sact, NULL);
+        sigaction(SIGTSTP, &sact, NULL);
+        sigaction(SIGTTIN, &sact, NULL);
+        sigaction(SIGTTOU, &sact, NULL);
+        /*sigaction(SIGCHLD, &sact, NULL);*/
 
         /* Create our own process group */
         info.pgid = getpid();
