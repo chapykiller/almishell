@@ -252,7 +252,8 @@ void run_builtin_command(struct shell_info *sh, struct job *first_job, char **ar
 
     case SHELL_CD:
         if(args[1]) {
-            chdir(args[1]);
+            if(chdir(args[1]) < 0)
+                perror("almishell");
 
             free(sh->current_path);
             sh->current_path = getcwd(NULL, 0);
@@ -292,13 +293,14 @@ int main(int argc, char *argv[])
         } while(!command_line);
 
         j = parse_command_line(command_line);
-        j->id = tail_job ? tail_job->id+1 : 1;
 
         if(check_processes(j)) {
             if(!j) {
                 printf("Syntax Error\n"); /* TODO: Improve error message */
             } else {
                 enum SHELL_CMD cmd = is_builtin_command(j);
+
+                j->id = tail_job ? tail_job->id+1 : 1;
 
                 if(cmd == SHELL_NONE) {
                     if(!first_job) {
