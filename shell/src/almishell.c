@@ -19,6 +19,9 @@
 
 #include <readline/readline.h>
 
+int plusJob;
+int minusJob;
+
 size_t count_pipes(char *command_line)
 {
     size_t pipe_num = 0;
@@ -215,7 +218,7 @@ void run_jobs(struct job *first_job) {
     struct job *it = first_job;
 
     while(it) {
-        printf("[%d] - ", it->id);
+        printf("[%d]%c  ", it->id, (plusJob==it->id ? '+' : (minusJob==it->id ? '-' : ' ')));
 
         if(job_is_completed(it)) {
             struct process_node *last = it->first_process;
@@ -242,6 +245,31 @@ void run_jobs(struct job *first_job) {
     }
 }
 
+void fg_cmd(struct shell_info *sh, struct job *first_job, char **args) {
+    int i;
+    struct job *current;
+
+    if(!args[1]) {
+        i = plusJob;
+    }
+    else {
+        i = atoi(args[1]);
+    }
+
+    current = first_job;
+    while(current) {
+        if(current->id == i) {
+            if(plusJob != i)
+                minusJob = plusJob;
+            plusJob = i;
+
+            printf("%s\n", current->command);
+            put_job_in_foreground(sh, current, first_job, 1);
+            return;
+        }
+    }
+}
+
 void run_builtin_command(struct shell_info *sh, struct job *first_job, char **args, int id)
 {
     switch(id) {
@@ -260,11 +288,12 @@ void run_builtin_command(struct shell_info *sh, struct job *first_job, char **ar
         }
         break;
 
-    case SHELL_JOBS: /* TODO */
+    case SHELL_JOBS:
         run_jobs(first_job);
         break;
 
-    case SHELL_FG: /* TODO */
+    case SHELL_FG:
+        fg_cmd(sh, first_job, args);
         break;
 
     case SHELL_BG: /* TODO */
@@ -305,9 +334,13 @@ int main(int argc, char *argv[])
                 if(cmd == SHELL_NONE) {
                     if(!first_job) {
                         first_job = tail_job = j;
+                        minusJob = plusJob = 1;
                     } else {
                         tail_job->next = j;
                         tail_job = j;
+
+                        minusJob = plusJob;
+                        plusJob = j->id;
                     }
 
                     launch_job(&shinfo, j, first_job, 1);
@@ -325,9 +358,16 @@ int main(int argc, char *argv[])
 
         while(current_job) {
             if(job_is_completed(current_job)) {
+                if(current_job->id == plusJob) {
+                    plusJob = minusJob;
+                }
+                else if(current_job->id == minusJob) {
+                    minusJob = plusJob;
+                }
                 if(first_job == tail_job) {
                     delete_job(current_job);
                     current_job = first_job = tail_job = NULL;
+                    plusJob = minusJob = 0;
                 } else if(current_job == first_job) {
                     first_job = current_job->next;
                     delete_job(current_job);
