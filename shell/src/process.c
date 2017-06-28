@@ -8,7 +8,6 @@
 /* Create process with default values */
 struct process *init_process()
 {
-    const int io[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
     struct process *p = (struct process *) malloc(sizeof(struct process));
 
     p->argv = NULL;
@@ -17,12 +16,10 @@ struct process *init_process()
     p->status = 0;
     p->stopped = 0;
 
-    memcpy(p->io, io, sizeof(int) * 3);
-
     return p;
 }
 
-void run_process(struct shell_info *s, struct process *p, pid_t pgid, int fg)
+void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3], int fg)
 {
     int i;
     pid_t pid;
@@ -51,11 +48,11 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int fg)
 
     /* Set the standard input/output channels of the new process.  */
     for(i = 0; i < 3; ++i) {
-        if(p->io[i] != std_filenos[i]) {
-            if(dup2(p->io[i], std_filenos[i]) < 0) {
-                perror("almishell: dup2");
+        if(io[i] != std_filenos[i]) {
+            if(dup2(io[i], std_filenos[i]) < 0) {
+                perror("dup2");
             }
-            close(p->io[i]);
+            close(io[i]);
         }
     }
 

@@ -9,12 +9,15 @@
 
 struct job *init_job(char *command_line)
 {
+    const int io[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
     struct job *j = (struct job *) malloc(sizeof(struct job));
 
     j->background = 'f';
     j->first_process = NULL;
     j->pgid = 0;
     j->size = 0;
+
+    memcpy(j->io, io, sizeof(int) * 3);
 
     j->command = (char*) malloc((strlen(command_line) + 1) * sizeof(char));
     strcpy(j->command, command_line);
@@ -111,8 +114,9 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
     struct process_node *node;
     pid_t pid;
     int mypipe[2];
+    int io[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
 
-    /* TODO: Input redirection for the whole pipe or process ? */
+    io[0] = j->io[0];
     for (node = j->first_process; node; node = node->next) {
         /* Set up pipes, if necessary.  */
         if (node->next) {
@@ -121,19 +125,17 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
                 exit (1);
             }
 
-            /* Abort current process output redirection to file */
-            if(node->p->io[1] != STDOUT_FILENO)
-                close(node->p->io[1]);
-
             /* Redirect output to the pipe */
-            node->p->io[1] = mypipe[1];
+            io[1] = mypipe[1];
         }
+        else
+            io[1] = j->io[1];
 
         /* Fork the child processes.  */
         pid = fork ();
         if (pid == 0)
             /* This is the child process.  */
-            run_process(s, node->p, j->pgid, foreground);
+            run_process(s, node->p, j->pgid, io, foreground);
         else if (pid < 0) {
             /* The fork failed.  */
             perror ("almishell: fork");
@@ -150,18 +152,14 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
 
         /* Clean up after pipes. */
         if(node->next) {
-            close(node->p->io[1]);
-
-            /* Abort the next process input redirection to a file */
-            if(node->next->p->io[0] != STDIN_FILENO)
-                close(node->next->p->io[0]);
+            close(io[1]);
 
             /* Set the next process input as the pipe input */
-            node->next->p->io[0] = mypipe[0];
+            io[0] = mypipe[0];
         }
 
         if(node != j->first_process)
-            close(node->p->io[0]);
+            close(io[0]);
     }
 
     /* TODO: Inform job launch ? */

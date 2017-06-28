@@ -20,6 +20,7 @@ struct job {
     struct termios tmodes;
     size_t size;
     struct job *next;
+    int io[3];
 };
 
 struct job *init_job(char *command_line);
