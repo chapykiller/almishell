@@ -75,6 +75,8 @@ void signal_continue_job(struct shell_info *s, struct job *j)
 
 void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *first_job, int cont)
 {
+    j->background = 'f';
+
     /* Give control access to the shell terminal to the job */
     if(tcsetpgrp(s->terminal, j->pgid) < 0) {
         perror("tcsetpgrp");
@@ -96,7 +98,12 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *firs
 
 void put_job_in_background(struct shell_info *s, struct job *j, struct job *first_job, int cont)
 {
-    /* TODO */
+    j->background = 'b';
+
+    /* Send the job a continue signal, if necessary.  */
+    if (cont)
+        if (kill (-j->pgid, SIGCONT) < 0)
+            perror ("kill (SIGCONT)");
 }
 
 void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int foreground)
