@@ -245,7 +245,7 @@ void run_jobs(struct job *first_job) {
     }
 }
 
-void fg_cmd(struct shell_info *sh, struct job *first_job, char **args) {
+void fg_bg(struct shell_info *sh, struct job *first_job, char **args, int id) {
     int i;
     struct job *current;
 
@@ -264,7 +264,10 @@ void fg_cmd(struct shell_info *sh, struct job *first_job, char **args) {
             plusJob = i;
 
             printf("%s\n", current->command);
-            put_job_in_foreground(sh, current, first_job, 1);
+            if(id == SHELL_FG)
+                put_job_in_foreground(sh, current, first_job, 1);
+            else
+                put_job_in_background(sh, current, first_job, 1);
             return;
         }
     }
@@ -293,10 +296,8 @@ void run_builtin_command(struct shell_info *sh, struct job *first_job, char **ar
         break;
 
     case SHELL_FG:
-        fg_cmd(sh, first_job, args);
-        break;
-
-    case SHELL_BG: /* TODO */
+    case SHELL_BG:
+        fg_bg(sh, first_job, args, id);
         break;
 
     default: /* TODO: Handle error */

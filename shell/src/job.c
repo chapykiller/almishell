@@ -94,6 +94,11 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *firs
     tcsetattr(s->terminal, TCSADRAIN, &s->tmodes);
 }
 
+void put_job_in_background(struct shell_info *s, struct job *j, struct job *first_job, int cont)
+{
+    /* TODO */
+}
+
 void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int foreground)
 {
     struct process_node *node;
@@ -159,8 +164,9 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
     } else if (foreground) {
         put_job_in_foreground(s, j, first_job, 0);
     }
-    /* TODO: else
-        put_job_in_background (j, 0); */
+    else {
+        put_job_in_background(s, j, first_job, 0);
+    }
 }
 
 int check_processes(struct job *j)
