@@ -284,12 +284,18 @@ void run_jobs(struct job *first_job) {
 void fg_bg(struct shell_info *sh, struct job *first_job, char **args, int id) {
     int i;
     struct job *current;
+    struct process_node *node_p;
 
     if(!args[1]) {
         i = plusJob;
     }
     else {
         i = atoi(args[1]);
+    }
+
+    if(i < 1) {
+        printf("almishell: fg: %s: no such job\n", args[1] ? args[1] : "current");
+        return;
     }
 
     current = first_job;
@@ -300,13 +306,21 @@ void fg_bg(struct shell_info *sh, struct job *first_job, char **args, int id) {
             plusJob = i;
 
             printf("%s\n", current->command);
+
+            for (node_p = current->first_process; node_p; node_p = node_p->next)
+                node_p->p->stopped = 0;
+                
             if(id == SHELL_FG)
                 put_job_in_foreground(sh, current, first_job, 1);
             else
                 put_job_in_background(sh, current, first_job, 1);
+
             return;
         }
     }
+
+
+    printf("almishell: fg: %s: no such job\n", args[1] ? args[1] : "current");
 }
 
 void run_builtin_command(struct shell_info *sh, struct job *first_job, char **args, int id)
@@ -362,7 +376,7 @@ int main(int argc, char *argv[])
 
         if(check_processes(j)) {
             if(!j) {
-                printf("Syntax Error\n"); /* TODO: Improve error message */
+                printf("almishell: syntax error\n"); /* TODO: Improve error message */
             } else {
                 enum SHELL_CMD cmd = is_builtin_command(j);
 
@@ -388,6 +402,10 @@ int main(int argc, char *argv[])
             }
 
             /* TODO: Handle job list, some running in the background and others not */
+        }
+        else {
+            if(j->first_process && j->first_process->next)
+                printf("almishell: syntax error\n");
         }
 
         current_job = first_job;
