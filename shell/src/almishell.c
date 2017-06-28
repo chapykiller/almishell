@@ -394,7 +394,7 @@ int main(int argc, char *argv[])
                         plusJob = j->id;
                     }
 
-                    launch_job(&shinfo, j, first_job, 1);
+                    launch_job(&shinfo, j, first_job);
                 } else { /* Built-in command */
                     run_builtin_command(&shinfo, first_job, j->first_process->p->argv, cmd);
                     delete_job(j);

@@ -17,6 +17,6 @@ struct process {
 struct process *init_process(void);
 
 /* NOTE: Should be called after fork */
-void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3], int fg);
+void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3], char bg);
 
 #endif /* PROCESS_H */

@@ -19,7 +19,7 @@ struct process *init_process()
     return p;
 }
 
-void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3], int fg)
+void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3], char bg)
 {
     int i;
     pid_t pid;
@@ -34,7 +34,7 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
         setpgid(pid, pgid);
 
         /* If it should run on the foreground */
-        if(fg)
+        if(bg != 'b')
             tcsetpgrp(s->terminal, pgid);
 
         /* Set the handling for job control signals back to the default. */
