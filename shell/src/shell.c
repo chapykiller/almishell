@@ -25,6 +25,8 @@ struct shell_info init_shell()
 
     /* Setup the sighub handler */
     sact.sa_handler = SIG_IGN;
+    sigemptyset(&sact.sa_mask);
+    sact.sa_flags = 0;
 
     /* If the shell is running interactively */
     if(info.interactive) {

@@ -74,7 +74,7 @@ struct process *parse_process(char *command)
             else
                 p->io[1] = fd;
         } else if(args[i][0] != '&' || args[i][1] != '\0') {
-            p->argv[p_argc] = (char*) malloc(strlen(args[i]) * sizeof(char));
+            p->argv[p_argc] = (char*) malloc((strlen(args[i]) + 1) * sizeof(char));
             strcpy(p->argv[p_argc++], args[i]);
         }
     }
@@ -89,7 +89,7 @@ struct job *parse_command_line(char *command_line)
     size_t i = 0, command_num = count_pipes(command_line) + 1;
     const char *command_delim = "|";
     char **commands = (char **) malloc(sizeof(char *) * command_num);
-    struct job *j = init_job();
+    struct job *j = init_job(command_line);
     struct process_node **next = &j->first_process, *current;
     commands[i++] = strtok(command_line, command_delim);
     while( (i < command_num) && (commands[i++] = strtok(NULL, command_delim)) );
@@ -237,8 +237,8 @@ void run_jobs(struct job *first_job) {
             printf("Running");
         }
 
+        printf("\t\t\t%s\n", it->command);
         it = it->next;
-        printf("\n");
     }
 }
 

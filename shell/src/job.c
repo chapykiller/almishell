@@ -5,8 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 
-struct job *init_job()
+struct job *init_job(char *command_line)
 {
     struct job *j = (struct job *) malloc(sizeof(struct job));
 
@@ -14,6 +15,9 @@ struct job *init_job()
     j->first_process = NULL;
     j->pgid = 0;
     j->size = 0;
+
+    j->command = (char*) malloc((strlen(command_line) + 1) * sizeof(char));
+    strcpy(j->command, command_line);
 
     j->next = NULL;
 
@@ -28,8 +32,13 @@ void delete_job(struct job *j)
         next = current->next;
 
         if(current->p) {
-            if(current->p->argv)
+            if(current->p->argv) {
+                int i;
+                for(i = 0; current->p->argv[i]; ++i) {
+                    free(current->p->argv[i]);
+                }
                 free(current->p->argv); /* Free token location memory */
+            }
 
             free(current->p);
         }
@@ -37,6 +46,7 @@ void delete_job(struct job *j)
         current = next;
     }
 
+    free(j->command);
     free(j);
 }
 

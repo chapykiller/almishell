@@ -13,6 +13,7 @@ struct process_node {
 /* Preliminary job representation, for a job with a single process */
 struct job {
     int id;
+    char *command;
     struct process_node *first_process;
     char background;
     pid_t pgid;
@@ -21,7 +22,7 @@ struct job {
     struct job *next;
 };
 
-struct job *init_job(void);
+struct job *init_job(char *command_line);
 
 void delete_job(struct job *j);
 
