@@ -50,7 +50,7 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
     for(i = 0; i < 3; ++i) {
         if(io[i] != std_filenos[i]) {
             if(dup2(io[i], std_filenos[i]) < 0) {
-                perror("dup2");
+                perror("almishell: dup2");
             }
             close(io[i]);
         }

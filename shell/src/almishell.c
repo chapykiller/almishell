@@ -89,13 +89,13 @@ struct process *parse_last_process(struct job *j, char *command)
             if(args[i][0] == '<') {
                 fd = open(args[++i], O_RDONLY);
                 if(fd < 0)
-                    perror("open");
+                    perror("almishell: open");
                 else
                     j->io[0] = fd;
             } else if(args[i][0] == '>') {
                 fd = open(args[++i], O_WRONLY|O_CREAT, 0666);
                 if(fd < 0)
-                    perror("open");
+                    perror("almishell: open");
                 else
                     j->io[1] = fd;
             } else {
@@ -314,7 +314,7 @@ void fg_bg(struct shell_info *sh, struct job *first_job, char **args, int id) {
 
             for (node_p = current->first_process; node_p; node_p = node_p->next)
                 node_p->p->stopped = 0;
-                
+
             if(id == SHELL_FG)
                 put_job_in_foreground(sh, current, first_job, 1);
             else
