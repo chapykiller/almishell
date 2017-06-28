@@ -12,12 +12,11 @@ struct process {
     char completed;             /* true if process has completed */
     char stopped;               /* true if process has stopped */
     int status;                 /* reported status value */
-    int io[3];
 };
 
 struct process *init_process(void);
 
 /* NOTE: Should be called after fork */
-void run_process(struct shell_info *s, struct process *p, pid_t pgid, int fg);
+void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3], int fg);
 
 #endif /* PROCESS_H */

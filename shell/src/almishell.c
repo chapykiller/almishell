@@ -43,7 +43,7 @@ struct process *parse_process(char *command)
     const char *command_delim = "\t ";
     struct process *p = init_process();
     char *args[_POSIX_ARG_MAX];
-    int argc = 0, i, p_argc, fd;
+    int argc = 0, i, p_argc;
 
     args[argc++] = strtok(command, command_delim);
     if(!args[0]) {
@@ -55,28 +55,60 @@ struct process *parse_process(char *command)
 
     p->argv = (char **) malloc(argc-- * sizeof(char *));
 
-    /* TODO: Create a parse ignoring < and > for jobs with multiple processes
-    and read those only in the end of the command line ? */
     for(p_argc = 0, i = 0; args[i]; ++i) {
-        if(args[i][0] == '<') {
-            if(i + 1 == argc)
-                continue;
+        p->argv[p_argc] = (char*) malloc((strlen(args[i]) + 1) * sizeof(char));
+        strcpy(p->argv[p_argc++], args[i]);
+    }
 
-            fd = open(args[++i], O_RDONLY);
-            if(fd < 0)
-                perror("open");
-            else
-                p->io[0] = fd;
-        } else if(args[i][0] == '>') {
-            if(i + 1 == argc)
-                continue;
+    p->argv[p_argc] = (char*)NULL;
 
-            fd = open(args[++i], O_WRONLY|O_CREAT, 0666);
-            if(fd < 0)
-                perror("open");
+    return p;
+}
+
+struct process *parse_last_process(struct job *j, char *command)
+{
+    const char *command_delim = "\t ";
+    struct process *p = init_process();
+    char *args[_POSIX_ARG_MAX];
+    int argc = 0, i, p_argc, fd;
+    int true_arg;
+
+    args[argc++] = strtok(command, command_delim);
+    if(!args[0]) {
+        free(p);
+        return NULL;
+    }
+
+    while( (argc < _POSIX_ARG_MAX) && (args[argc++] = strtok(NULL, command_delim)) );
+
+    p->argv = (char **) malloc(argc-- * sizeof(char *));
+
+    for(p_argc = 0, i = 0; args[i]; ++i) {
+        true_arg = 0;
+        if(i + 1 != argc) {
+            if(args[i][0] == '<') {
+                fd = open(args[++i], O_RDONLY);
+                if(fd < 0)
+                    perror("open");
+                else
+                    j->io[0] = fd;
+            } else if(args[i][0] == '>') {
+                fd = open(args[++i], O_WRONLY|O_CREAT, 0666);
+                if(fd < 0)
+                    perror("open");
+                else
+                    j->io[1] = fd;
+            } else {
+                true_arg = 1;
+            }
+        } else {
+            if(args[i][0] == '&')
+                j->background = 'b';
             else
-                p->io[1] = fd;
-        } else if(args[i][0] != '&' || args[i][1] != '\0') {
+                true_arg = 1;
+        }
+
+        if(true_arg) {
             p->argv[p_argc] = (char*) malloc((strlen(args[i]) + 1) * sizeof(char));
             strcpy(p->argv[p_argc++], args[i]);
         }
@@ -94,14 +126,12 @@ struct job *parse_command_line(char *command_line)
     char **commands = (char **) malloc(sizeof(char *) * command_num);
     struct job *j = init_job(command_line);
     struct process_node **next = &j->first_process, *current;
+
     commands[i++] = strtok(command_line, command_delim);
     while( (i < command_num) && (commands[i++] = strtok(NULL, command_delim)) );
 
     i = 0;
-    while( (i < command_num) && commands[i] ) {
-        if(i + 1 == command_num && strchr(commands[i], '&'))
-            j->background = 'b';
-
+    while( (i + 1 < command_num) && commands[i] ) {
         current = (struct process_node *) malloc(sizeof(struct process_node));
         current->p = parse_process(commands[i]);
         current->next = NULL;
@@ -111,6 +141,12 @@ struct job *parse_command_line(char *command_line)
 
         ++i;
     }
+
+    /* Handle last process */
+    current = (struct process_node *) malloc(sizeof(struct process_node));
+    current->p = parse_last_process(j, commands[i]);
+    current->next = NULL;
+    *next = current;
 
     j->size = command_num;
 
