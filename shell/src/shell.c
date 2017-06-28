@@ -10,7 +10,8 @@ const char *shell_cmd[SHELL_CMD_NUM] = {
     "cd",
     "jobs",
     "fg",
-    "bg"
+    "bg",
+    "almishell"
 };
 
 struct shell_info init_shell()
@@ -45,7 +46,7 @@ struct shell_info init_shell()
         /* Create our own process group */
         info.pgid = getpid();
         if(setpgid(info.pgid, info.pgid) < 0) {
-            perror("Couldn't put the shell in its own process group");
+            perror("almishell: Couldn't put the shell in its own process group");
             exit(EXIT_FAILURE);
         }
 

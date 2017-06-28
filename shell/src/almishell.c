@@ -64,7 +64,7 @@ struct process *parse_process(char *command)
 
             fd = open(args[++i], O_RDONLY);
             if(fd < 0)
-                perror("open");
+                perror("almishell: open");
             else
                 p->io[0] = fd;
         } else if(args[i][0] == '>') {
@@ -73,7 +73,7 @@ struct process *parse_process(char *command)
 
             fd = open(args[++i], O_WRONLY|O_CREAT, 0666);
             if(fd < 0)
-                perror("open");
+                perror("almishell: open");
             else
                 p->io[1] = fd;
         } else if(args[i][0] != '&' || args[i][1] != '\0') {
@@ -160,7 +160,7 @@ char *read_command_line()
 
     /* TODO: Handle error */
     if(command_line_size < 0)
-        perror("getline");
+        perror("almishell: getline");
 
     return NULL;
 }
@@ -205,6 +205,11 @@ enum SHELL_CMD is_builtin_command(struct job *j)
     case 'b':
         if(strcmp(shell_cmd[SHELL_BG], cmd) == 0)
             return SHELL_BG;
+        break;
+
+    case 'a':
+        if(strcmp(shell_cmd[SHELL_ALMISHELL], cmd) == 0)
+            return SHELL_ALMISHELL;
         break;
 
     default:
@@ -273,7 +278,7 @@ void fg_bg(struct shell_info *sh, struct job *first_job, char **args, int id) {
 
             for (node_p = current->first_process; node_p; node_p = node_p->next)
                 node_p->p->stopped = 0;
-                
+
             if(id == SHELL_FG)
                 put_job_in_foreground(sh, current, first_job, 1);
             else
@@ -298,7 +303,7 @@ void run_builtin_command(struct shell_info *sh, struct job *first_job, char **ar
     case SHELL_CD:
         if(args[1]) {
             if(chdir(args[1]) < 0)
-                perror("almishell");
+                perror("almishell: cd");
 
             free(sh->current_path);
             sh->current_path = getcwd(NULL, 0);
@@ -314,6 +319,10 @@ void run_builtin_command(struct shell_info *sh, struct job *first_job, char **ar
         fg_bg(sh, first_job, args, id);
         break;
 
+    case SHELL_ALMISHELL:
+        printf("\"Os alunos tão latindo Michel, traz a antirábica.\"\n");
+        break;
+
     default: /* TODO: Handle error */
         break;
     }
@@ -327,6 +336,25 @@ int main(int argc, char *argv[])
     struct job *first_job, *tail_job, *current_job, *previous_job;
 
     first_job = tail_job = NULL;
+
+    if(argc > 1) {
+        if(strcmp(argv[1], "--command") == 0 || strcmp(argv[1], "-c") == 0) {
+            if(argc >= 3) {
+                /*j = parse_command_line(argv[2]);*/
+            }
+            else {
+                printf("almishell: %s: requires an argument\n", argv[1]);
+            }
+        }
+        else if(strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0) {
+            printf("Almishell, version 1.0.0\n");
+        }
+        else {
+            printf("almishell: %s: invalid option\n", argv[1]);
+        }
+
+        return 0;
+    }
 
     while(shinfo.run) {
         struct job *j;

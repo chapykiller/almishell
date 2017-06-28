@@ -11,6 +11,7 @@ enum SHELL_CMD {
     SHELL_JOBS,
     SHELL_FG,
     SHELL_BG,
+    SHELL_ALMISHELL,
     SHELL_CMD_NUM,
     SHELL_NONE
 };

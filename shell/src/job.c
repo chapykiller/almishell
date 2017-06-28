@@ -70,7 +70,7 @@ void signal_continue_job(struct shell_info *s, struct job *j)
 {
     tcsetattr(s->terminal, TCSADRAIN, &j->tmodes);
     if(kill(- j->pgid, SIGCONT) < 0)
-        perror("kill (SIGCONT)");
+        perror("almishell: kill (SIGCONT)");
 }
 
 void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *first_job, int cont)
@@ -79,7 +79,7 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *firs
 
     /* Give control access to the shell terminal to the job */
     if(tcsetpgrp(s->terminal, j->pgid) < 0) {
-        perror("tcsetpgrp");
+        perror("almishell: tcsetpgrp");
         return;
     }
 
@@ -103,7 +103,7 @@ void put_job_in_background(struct shell_info *s, struct job *j, struct job *firs
     /* Send the job a continue signal, if necessary.  */
     if (cont)
         if (kill (-j->pgid, SIGCONT) < 0)
-            perror ("kill (SIGCONT)");
+            perror ("almishell: kill (SIGCONT)");
 }
 
 void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int foreground)
@@ -117,7 +117,7 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
         /* Set up pipes, if necessary.  */
         if (node->next) {
             if (pipe (mypipe) < 0) {
-                perror ("pipe");
+                perror ("almishell: pipe");
                 exit (1);
             }
 
@@ -136,7 +136,7 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
             run_process(s, node->p, j->pgid, foreground);
         else if (pid < 0) {
             /* The fork failed.  */
-            perror ("fork");
+            perror ("almishell: fork");
             exit (1);
         } else {
             /* This is the parent process.  */
@@ -225,7 +225,7 @@ int mark_process_status (pid_t pid, int status, struct job* j)
         return -1;
     else {
         /* Other weird errors.  */
-        perror ("waitpid");
+        perror ("almishell: waitpid");
         return -1;
     }
 }

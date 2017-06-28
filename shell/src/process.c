@@ -53,7 +53,7 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int fg)
     for(i = 0; i < 3; ++i) {
         if(p->io[i] != std_filenos[i]) {
             if(dup2(p->io[i], std_filenos[i]) < 0) {
-                perror("dup2");
+                perror("almishell: dup2");
             }
             close(p->io[i]);
         }
@@ -72,6 +72,6 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int fg)
     execvp(p->argv[0], p->argv);
 
     /* TODO: Verify if execution state should be reported similarly to runcmd */
-    perror("execvp");
+    perror("almishell: execvp");
     exit(EXIT_FAILURE);
 }
