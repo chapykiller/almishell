@@ -109,7 +109,7 @@ void put_job_in_background(struct shell_info *s, struct job *j, struct job *firs
             perror ("almishell: kill (SIGCONT)");
 }
 
-void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int foreground)
+void launch_job (struct shell_info *s, struct job *j, struct job *first_job)
 {
     struct process_node *node;
     pid_t pid;
@@ -135,7 +135,7 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
         pid = fork ();
         if (pid == 0)
             /* This is the child process.  */
-            run_process(s, node->p, j->pgid, io, foreground);
+            run_process(s, node->p, j->pgid, io, j->background);
         else if (pid < 0) {
             /* The fork failed.  */
             perror ("almishell: fork");
@@ -166,7 +166,7 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job, int
 
     if (!s->interactive) {
         wait_job (j, first_job);
-    } else if (foreground) {
+    } else if (j->background == 'f') {
         put_job_in_foreground(s, j, first_job, 0);
     }
     else {
