@@ -83,24 +83,34 @@ struct process *parse_last_process(struct job *j, char *command)
     p->argv = (char **) malloc(argc-- * sizeof(char *));
 
     for(p_argc = 0, i = 0; args[i]; ++i) {
+        int true_arg = 1;
+
         if(i + 1 != argc) {
             if(args[i][0] == '<') {
                 fd = open(args[++i], O_RDONLY);
+
                 if(fd < 0)
                     perror("almishell: open");
                 else
                     j->io[0] = fd;
+
+                true_arg = 0;
             } else if(args[i][0] == '>') {
                 fd = open(args[++i], O_WRONLY|O_CREAT, 0666);
+
                 if(fd < 0)
                     perror("almishell: open");
                 else
                     j->io[1] = fd;
+
+                true_arg = 0;
             }
         }
 
-        p->argv[p_argc] = (char*) malloc((strlen(args[i]) + 1) * sizeof(char));
-        strcpy(p->argv[p_argc++], args[i]);
+        if(true_arg) {
+            p->argv[p_argc] = (char*) malloc((strlen(args[i]) + 1) * sizeof(char));
+            strcpy(p->argv[p_argc++], args[i]);
+        }
     }
 
     p->argv[p_argc] = (char*)NULL;
@@ -108,7 +118,8 @@ struct process *parse_last_process(struct job *j, char *command)
     return p;
 }
 
-char parse_last_ampersand(char *command_line) {
+char parse_last_ampersand(char *command_line)
+{
     size_t i = 1;
     char *ampersand = strrchr(command_line, '&');
 
@@ -122,6 +133,9 @@ char parse_last_ampersand(char *command_line) {
     /* If there were only spaces after the ampersand, remove it and the space */
     if(ampersand[i] == '\0') {
         ampersand[0] = '\0';
+        return 'b'; /* Signal background */
+    } else if(ampersand[i] == '<' || ampersand[i] == '>') { /* If the & is followed by file redirection */
+        ampersand[0] = ' ';
         return 'b'; /* Signal background */
     }
 
@@ -268,7 +282,8 @@ enum SHELL_CMD is_builtin_command(struct job *j)
     return SHELL_NONE;
 }
 
-void run_jobs(struct job *first_job) {
+void run_jobs(struct job *first_job)
+{
     struct job *it = first_job;
 
     while(it) {
@@ -285,12 +300,10 @@ void run_jobs(struct job *first_job) {
 
             if(last->p->status != 0)
                 printf("(%d)", last->p->status);
-        }
-        else if(job_is_stopped(it)) {
+        } else if(job_is_stopped(it)) {
             printf("Stopped");
             /* TODO: Identify the signal that made it stop, like in bash */
-        }
-        else { /* Job is running */
+        } else { /* Job is running */
             printf("Running");
         }
 
@@ -299,15 +312,15 @@ void run_jobs(struct job *first_job) {
     }
 }
 
-void fg_bg(struct shell_info *sh, struct job *first_job, char **args, int id) {
+void fg_bg(struct shell_info *sh, struct job *first_job, char **args, int id)
+{
     int i;
     struct job *current;
     struct process_node *node_p;
 
     if(!args[1]) {
         i = plusJob;
-    }
-    else {
+    } else {
         i = atoi(args[1]);
     }
 
@@ -378,7 +391,8 @@ void run_builtin_command(struct shell_info *sh, struct job *first_job, char **ar
 }
 
 /* Extract command line from shell arguments on -c mode */
-char *extract_command_line(int argc, char *argv[]) {
+char *extract_command_line(int argc, char *argv[])
+{
     int i;
     char *command_line = NULL;
     size_t command_line_size = 0;
@@ -412,17 +426,14 @@ int main(int argc, char *argv[])
             if(argc >= 3) {
                 command_line = extract_command_line(argc, argv);
                 shinfo.run = 0; /* Run shell a single time */
-            }
-            else {
+            } else {
                 printf("almishell: %s: requires an argument\n", argv[1]);
                 return 0;
             }
-        }
-        else if(strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0) {
+        } else if(strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0) {
             printf("Almishell, version 1.0.0\n");
             return 0;
-        }
-        else {
+        } else {
             printf("almishell: %s: invalid option\n", argv[1]);
             return 0;
         }
@@ -466,8 +477,7 @@ int main(int argc, char *argv[])
             }
 
             /* TODO: Handle job list, some running in the background and others not */
-        }
-        else {
+        } else {
             if(j->first_process && j->first_process->next)
                 printf("almishell: syntax error\n");
         }
@@ -479,8 +489,7 @@ int main(int argc, char *argv[])
             if(job_is_completed(current_job)) {
                 if(current_job->id == plusJob) {
                     plusJob = minusJob;
-                }
-                else if(current_job->id == minusJob) {
+                } else if(current_job->id == minusJob) {
                     minusJob = plusJob;
                 }
                 if(first_job == tail_job) {

@@ -127,8 +127,7 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job)
 
             /* Redirect output to the pipe */
             io[1] = mypipe[1];
-        }
-        else
+        } else
             io[1] = j->io[1];
 
         /* Fork the child processes.  */
@@ -168,8 +167,7 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job)
         wait_job (j, first_job);
     } else if (j->background == 'f') {
         put_job_in_foreground(s, j, first_job, 0);
-    }
-    else {
+    } else {
         put_job_in_background(s, j, first_job, 0);
     }
 }
