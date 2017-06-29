@@ -23,7 +23,7 @@ struct job {
     int io[3];
 };
 
-struct job *init_job(char *command_line);
+struct job *init_job(char *command_line, char background);
 
 void delete_job(struct job *j);
 

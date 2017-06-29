@@ -7,12 +7,12 @@
 #include <errno.h>
 #include <string.h>
 
-struct job *init_job(char *command_line)
+struct job *init_job(char *command_line, char background)
 {
     const int io[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
     struct job *j = (struct job *) malloc(sizeof(struct job));
 
-    j->background = 'f';
+    j->background = background;
     j->first_process = NULL;
     j->pgid = 0;
     j->size = 0;

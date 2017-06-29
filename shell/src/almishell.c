@@ -71,7 +71,6 @@ struct process *parse_last_process(struct job *j, char *command)
     struct process *p = init_process();
     char *args[_POSIX_ARG_MAX];
     int argc = 0, i, p_argc, fd;
-    int true_arg;
 
     args[argc++] = strtok(command, command_delim);
     if(!args[0]) {
@@ -84,7 +83,6 @@ struct process *parse_last_process(struct job *j, char *command)
     p->argv = (char **) malloc(argc-- * sizeof(char *));
 
     for(p_argc = 0, i = 0; args[i]; ++i) {
-        true_arg = 0;
         if(i + 1 != argc) {
             if(args[i][0] == '<') {
                 fd = open(args[++i], O_RDONLY);
@@ -98,20 +96,11 @@ struct process *parse_last_process(struct job *j, char *command)
                     perror("almishell: open");
                 else
                     j->io[1] = fd;
-            } else {
-                true_arg = 1;
             }
-        } else {
-            if(args[i][0] == '&')
-                j->background = 'b';
-            else
-                true_arg = 1;
         }
 
-        if(true_arg) {
-            p->argv[p_argc] = (char*) malloc((strlen(args[i]) + 1) * sizeof(char));
-            strcpy(p->argv[p_argc++], args[i]);
-        }
+        p->argv[p_argc] = (char*) malloc((strlen(args[i]) + 1) * sizeof(char));
+        strcpy(p->argv[p_argc++], args[i]);
     }
 
     p->argv[p_argc] = (char*)NULL;
@@ -119,13 +108,37 @@ struct process *parse_last_process(struct job *j, char *command)
     return p;
 }
 
+char parse_last_ampersand(char *command_line) {
+    size_t i = 1;
+    char *ampersand = strrchr(command_line, '&');
+
+    /* If & is not found, there's no need to remove it */
+    if(!ampersand)
+        return 'f';
+
+    /* Skip spaces */
+    while(isspace(ampersand[i])) ++i;
+
+    /* If there were only spaces after the ampersand, remove it and the space */
+    if(ampersand[i] == '\0') {
+        ampersand[0] = '\0';
+        return 'b'; /* Signal background */
+    }
+
+    return 'f'; /* Signal foreground */
+}
+
 struct job *parse_command_line(char *command_line)
 {
     size_t i = 0, command_num = count_pipes(command_line) + 1;
     const char *command_delim = "|";
     char **commands = (char **) malloc(sizeof(char *) * command_num);
-    struct job *j = init_job(command_line);
-    struct process_node **next = &j->first_process, *current;
+    struct job *j;
+    struct process_node **next, *current;
+    char background = parse_last_ampersand(command_line);
+
+    j = init_job(command_line, background);
+    next = &j->first_process;
 
     commands[i++] = strtok(command_line, command_delim);
     while( (i < command_num) && (commands[i++] = strtok(NULL, command_delim)) );
@@ -281,7 +294,7 @@ void run_jobs(struct job *first_job) {
             printf("Running");
         }
 
-        printf("\t\t\t%s\n", it->command);
+        printf("\t\t\t%s%s\n", it->command, it->background == 'b' ? " &" : "");
         it = it->next;
     }
 }
