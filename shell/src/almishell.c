@@ -364,6 +364,27 @@ void run_builtin_command(struct shell_info *sh, struct job *first_job, char **ar
     }
 }
 
+/* Extract command line from shell arguments on -c mode */
+char *extract_command_line(int argc, char *argv[]) {
+    int i;
+    char *command_line = NULL;
+    size_t command_line_size = 0;
+
+    for(i = 2; i < argc; ++i)
+        command_line_size += strlen(argv[i]) + 1; /* arg + separator char size */
+
+    command_line = (char *) malloc(sizeof(char) * command_line_size);
+
+    for(i = 2; i < argc; ++i) {
+        strcat(command_line, argv[i]);
+        strcat(command_line, " ");
+    }
+
+    command_line[command_line_size - 1] = '\0';
+
+    return command_line;
+}
+
 int main(int argc, char *argv[])
 {
     char *command_line = NULL;
@@ -376,29 +397,31 @@ int main(int argc, char *argv[])
     if(argc > 1) {
         if(strcmp(argv[1], "--command") == 0 || strcmp(argv[1], "-c") == 0) {
             if(argc >= 3) {
-                /*j = parse_command_line(argv[2]);*/
+                command_line = extract_command_line(argc, argv);
+                shinfo.run = 0; /* Run shell a single time */
             }
             else {
                 printf("almishell: %s: requires an argument\n", argv[1]);
+                return 0;
             }
         }
         else if(strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0) {
             printf("Almishell, version 1.0.0\n");
+            return 0;
         }
         else {
             printf("almishell: %s: invalid option\n", argv[1]);
+            return 0;
         }
-
-        return 0;
     }
 
-    while(shinfo.run) {
+    do {
         struct job *j;
 
-        do {
+        while(!command_line) {
             print_prompt(shinfo.current_path);
             command_line = read_command_line();
-        } while(!command_line);
+        }
 
         j = parse_command_line(command_line);
 
@@ -478,7 +501,7 @@ int main(int argc, char *argv[])
             free(command_line);
             command_line = NULL;
         }
-    }
+    } while(shinfo.run);
 
     delete_shell(&shinfo);
 
