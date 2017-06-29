@@ -226,6 +226,18 @@ int mark_process_status (pid_t pid, int status, struct job* j)
     }
 }
 
+/* Check for processes that have status information available,
+   without blocking.  */
+void update_status(struct job *first_job)
+{
+    int status;
+    pid_t pid;
+
+    do
+        pid = waitpid (-1, &status, WUNTRACED|WNOHANG);
+    while (!mark_process_status (pid, status, first_job));
+}
+
 /* Return true if all processes in the job have stopped or completed.  */
 int job_is_stopped (struct job *j)
 {

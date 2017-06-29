@@ -39,6 +39,8 @@ int check_processes(struct job *j);
 
 int mark_process_status(pid_t pid, int status, struct job* j);
 
+void update_status(struct job *first_job);
+
 int job_is_stopped(struct job *j);
 
 int job_is_completed(struct job *j);

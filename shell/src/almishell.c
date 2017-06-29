@@ -221,7 +221,6 @@ char *read_command_line()
         return command_line;
     }
 
-    /* TODO: Handle error */
     if(command_line_size < 0)
         perror("almishell: getline");
 
@@ -285,6 +284,8 @@ enum SHELL_CMD is_builtin_command(struct job *j)
 void run_jobs(struct job *first_job)
 {
     struct job *it = first_job;
+
+    update_status(first_job);
 
     while(it) {
         printf("[%d]%c  ", it->id, (plusJob==it->id ? '+' : (minusJob==it->id ? '-' : ' ')));
@@ -383,9 +384,12 @@ void run_builtin_command(struct shell_info *sh, struct job *first_job, char **ar
 
     case SHELL_ALMISHELL:
         printf("\"Os alunos tão latindo Michel, traz a antirábica.\"\n");
+        fflush(stdout);
         break;
 
-    default: /* TODO: Handle error */
+    default:
+        printf("almishell: invalid command\n");
+        fflush(stdout);
         break;
     }
 }
@@ -451,7 +455,7 @@ int main(int argc, char *argv[])
 
         if(check_processes(j)) {
             if(!j) {
-                printf("almishell: syntax error\n"); /* TODO: Improve error message */
+                printf("almishell: syntax error\n");
             } else {
                 enum SHELL_CMD cmd = is_builtin_command(j);
 
@@ -475,8 +479,6 @@ int main(int argc, char *argv[])
                     delete_job(j);
                 }
             }
-
-            /* TODO: Handle job list, some running in the background and others not */
         } else {
             if(j->first_process && j->first_process->next)
                 printf("almishell: syntax error\n");
