@@ -161,8 +161,6 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job)
             close(io[0]);
     }
 
-    /* TODO: Inform job launch ? */
-
     if (!s->interactive) {
         wait_job (j, first_job);
     } else if (j->background == 'f') {

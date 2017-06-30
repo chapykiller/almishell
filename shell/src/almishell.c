@@ -196,12 +196,12 @@ void print_prompt(const char *path)
 }
 
 /* Caller must free the allocated memory */
-char *read_command_line()
+char *read_command_line(FILE *input)
 {
     char *command_line = NULL;
     size_t buffer_size = 0;
 
-    ssize_t command_line_size = getline(&command_line, &buffer_size, stdin);
+    ssize_t command_line_size = getline(&command_line, &buffer_size, input);
 
     /* If there's at least one character other than newline */
     if(command_line_size > 1) {
@@ -212,8 +212,8 @@ char *read_command_line()
     free(command_line);
 
     /* If end of file is reached or CTRL + D is received, the command is exit */
-    if(feof(stdin)) {
-        clearerr(stdin);
+    if(feof(input)) {
+        clearerr(input);
         printf("\n");
         fflush(stdout);
         command_line = (char *) malloc(sizeof(char) * (strlen(shell_cmd[SHELL_EXIT]) + 1));
@@ -221,7 +221,7 @@ char *read_command_line()
         return command_line;
     }
 
-    if(command_line_size < 0)
+    if(command_line_size == -1)
         perror("almishell: getline");
 
     return NULL;
@@ -303,7 +303,6 @@ void run_jobs(struct job *first_job)
                 printf("(%d)", last->p->status);
         } else if(job_is_stopped(it)) {
             printf("Stopped");
-            /* TODO: Identify the signal that made it stop, like in bash */
         } else { /* Job is running */
             printf("Running");
         }
@@ -419,6 +418,7 @@ char *extract_command_line(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
     char *command_line = NULL;
+    FILE *input = stdin;
 
     struct shell_info shinfo = init_shell();
     struct job *first_job, *tail_job, *current_job, *previous_job;
@@ -432,14 +432,23 @@ int main(int argc, char *argv[])
                 shinfo.run = 0; /* Run shell a single time */
             } else {
                 printf("almishell: %s: requires an argument\n", argv[1]);
-                return 0;
+                return EXIT_FAILURE;
             }
         } else if(strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0) {
             printf("Almishell, version 1.0.0\n");
-            return 0;
-        } else {
+            return EXIT_FAILURE;
+        } else if(argv[1][0] == '-'){
             printf("almishell: %s: invalid option\n", argv[1]);
-            return 0;
+            return EXIT_FAILURE;
+        } else if(argc > 2) {
+            printf("%s", "almishell: too many arguments");
+            return EXIT_FAILURE;
+        } else {
+            input = fopen(argv[1], "r");
+            if(!input) {
+                perror("almishell: fopen");
+                return EXIT_FAILURE;
+            }
         }
     }
 
@@ -447,8 +456,9 @@ int main(int argc, char *argv[])
         struct job *j;
 
         while(!command_line) {
-            print_prompt(shinfo.current_path);
-            command_line = read_command_line();
+            if(input == stdin)
+                print_prompt(shinfo.current_path);
+            command_line = read_command_line(input);
         }
 
         j = parse_command_line(command_line);
@@ -528,6 +538,9 @@ int main(int argc, char *argv[])
     } while(shinfo.run);
 
     delete_shell(&shinfo);
+
+    if(input != stdin)
+        fclose(input);
 
     return EXIT_SUCCESS;
 }

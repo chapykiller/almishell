@@ -68,7 +68,6 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
 
     execvp(p->argv[0], p->argv);
 
-    /* TODO: Verify if execution state should be reported similarly to runcmd */
     perror("almishell: execvp");
     exit(EXIT_FAILURE);
 }
