@@ -153,13 +153,19 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job)
         if(node->next) {
             close(io[1]);
 
+            if(node != j->first_process)
+                close(io[0]);
+
             /* Set the next process input as the pipe input */
             io[0] = mypipe[0];
         }
-
-        if(node != j->first_process)
-            close(io[0]);
     }
+
+    if(io[0] != STDIN_FILENO)
+        close(io[0]);
+
+    if(io[1] != STDOUT_FILENO)
+        close(io[1]);
 
     if (!s->interactive) {
         wait_job (j, first_job);
