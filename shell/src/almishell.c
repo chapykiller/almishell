@@ -60,172 +60,6 @@ char *read_command_line(FILE *input)
     return NULL;
 }
 
-/*  If it's a builtin command, returns its index in the shell_cmd array,
-   else returns -1.
-*/
-
-enum SHELL_CMD is_builtin_command(struct job *j)
-{
-    const char *cmd = j->first_process->p->argv[0];
-
-    if(j->size > 1)
-        return SHELL_NONE;
-
-    switch(cmd[0]) {
-    case 'e':
-        if(strcmp(shell_cmd[SHELL_EXIT], cmd) == 0)
-            return SHELL_EXIT;
-        break;
-
-    case 'q':
-        if(strcmp(shell_cmd[SHELL_QUIT], cmd) == 0)
-            return SHELL_QUIT;
-        break;
-
-    case 'c':
-        if(strcmp(shell_cmd[SHELL_CD], cmd) == 0)
-            return SHELL_CD;
-        break;
-
-    case 'j':
-        if(strcmp(shell_cmd[SHELL_JOBS], cmd) == 0)
-            return SHELL_JOBS;
-        break;
-
-    case 'f':
-        if(strcmp(shell_cmd[SHELL_FG], cmd) == 0)
-            return SHELL_FG;
-        break;
-
-    case 'b':
-        if(strcmp(shell_cmd[SHELL_BG], cmd) == 0)
-            return SHELL_BG;
-        break;
-
-    case 'a':
-        if(strcmp(shell_cmd[SHELL_ALMISHELL], cmd) == 0)
-            return SHELL_ALMISHELL;
-        break;
-
-    default:
-        break;
-    }
-
-    return SHELL_NONE;
-}
-
-void run_jobs(struct shell_info *shi, struct job *first_job)
-{
-    struct job *it = first_job;
-
-    update_status(first_job);
-
-    while(it) {
-        printf("[%d]%c  ", it->id, (shi->plusJob==it->id ? '+' : (shi->minusJob==it->id ? '-' : ' ')));
-
-        if(job_is_completed(it)) {
-            struct process_node *last = it->first_process;
-
-            /* Loop until variable last holds the last process */
-            while(last->next != NULL)
-                last = last->next;
-
-            printf("Done");
-
-            if(last->p->status != 0)
-                printf("(%d)", last->p->status);
-        } else if(job_is_stopped(it)) {
-            printf("Stopped");
-        } else { /* Job is running */
-            printf("Running");
-        }
-
-        printf("\t\t\t%s%s\n", it->command, it->background == 'b' ? " &" : "");
-        it = it->next;
-    }
-}
-
-void fg_bg(struct shell_info *sh, struct job *first_job, char **args, int id)
-{
-    int i;
-    struct job *current;
-    struct process_node *node_p;
-
-    if(!args[1]) {
-        i = sh->plusJob;
-    } else {
-        i = atoi(args[1]);
-    }
-
-    if(i < 1) {
-        printf("almishell: fg: %s: no such job\n", args[1] ? args[1] : "current");
-        return;
-    }
-
-    current = first_job;
-    while(current) {
-        if(current->id == i) {
-            if(sh->plusJob != i)
-                sh->minusJob = sh->plusJob;
-            sh->plusJob = i;
-
-            printf("%s\n", current->command);
-
-            for (node_p = current->first_process; node_p; node_p = node_p->next)
-                node_p->p->stopped = 0;
-
-            if(id == SHELL_FG)
-                put_job_in_foreground(sh, current, first_job, 1);
-            else
-                put_job_in_background(sh, current, first_job, 1);
-
-            return;
-        }
-    }
-
-
-    printf("almishell: fg: %s: no such job\n", args[1] ? args[1] : "current");
-}
-
-void run_builtin_command(struct shell_info *sh, struct job *first_job, char **args, int id)
-{
-    switch(id) {
-    case SHELL_EXIT:
-    case SHELL_QUIT:
-        sh->run = 0;
-        break;
-
-    case SHELL_CD:
-        if(args[1]) {
-            if(chdir(args[1]) < 0)
-                perror("almishell: cd");
-
-            free(sh->current_path);
-            sh->current_path = getcwd(NULL, 0);
-        }
-        break;
-
-    case SHELL_JOBS:
-        run_jobs(sh, first_job);
-        break;
-
-    case SHELL_FG:
-    case SHELL_BG:
-        fg_bg(sh, first_job, args, id);
-        break;
-
-    case SHELL_ALMISHELL:
-        printf("\"Os alunos tão latindo Michel, traz a antirábica.\"\n");
-        fflush(stdout);
-        break;
-
-    default:
-        printf("almishell: invalid command\n");
-        fflush(stdout);
-        break;
-    }
-}
-
 /* Extract command line from shell arguments on -c mode */
 char *extract_command_line(int argc, char *argv[])
 {
@@ -254,9 +88,9 @@ int main(int argc, char *argv[])
     FILE *input = stdin;
 
     struct shell_info shinfo = init_shell();
-    struct job *first_job, *tail_job, *current_job, *previous_job;
+    struct job *tail_job, *current_job, *previous_job;
 
-    first_job = tail_job = NULL;
+    shinfo.first_job = tail_job = NULL;
 
     if(argc > 1) {
         if(strcmp(argv[1], "--command") == 0 || strcmp(argv[1], "-c") == 0) {
@@ -300,34 +134,27 @@ int main(int argc, char *argv[])
             if(!j) {
                 printf("almishell: syntax error\n");
             } else {
-                enum SHELL_CMD cmd = is_builtin_command(j);
-
                 j->id = tail_job ? tail_job->id+1 : 1;
 
-                if(cmd == SHELL_NONE) {
-                    if(!first_job) {
-                        first_job = tail_job = j;
-                        shinfo.minusJob = shinfo.plusJob = 1;
-                    } else {
-                        tail_job->next = j;
-                        tail_job = j;
+                if(!shinfo.first_job) {
+                    shinfo.first_job = tail_job = j;
+                    shinfo.minusJob = shinfo.plusJob = 1;
+                } else {
+                    tail_job->next = j;
+                    tail_job = j;
 
-                        shinfo.minusJob = shinfo.plusJob;
-                        shinfo.plusJob = j->id;
-                    }
-
-                    launch_job(&shinfo, j, first_job);
-                } else { /* Built-in command */
-                    run_builtin_command(&shinfo, first_job, j->first_process->p->argv, cmd);
-                    delete_job(j);
+                    shinfo.minusJob = shinfo.plusJob;
+                    shinfo.plusJob = j->id;
                 }
+
+                launch_job(&shinfo, j, shinfo.first_job);
             }
         } else {
             if(j->first_process && j->first_process->next)
                 printf("almishell: syntax error\n");
         }
 
-        current_job = first_job;
+        current_job = shinfo.first_job;
         previous_job = NULL;
 
         while(current_job) {
@@ -337,14 +164,14 @@ int main(int argc, char *argv[])
                 } else if(current_job->id == shinfo.minusJob) {
                     shinfo.minusJob = shinfo.plusJob;
                 }
-                if(first_job == tail_job) {
+                if(shinfo.first_job == tail_job) {
                     delete_job(current_job);
-                    current_job = first_job = tail_job = NULL;
+                    current_job = shinfo.first_job = tail_job = NULL;
                     shinfo.plusJob = shinfo.minusJob = 0;
-                } else if(current_job == first_job) {
-                    first_job = current_job->next;
+                } else if(current_job == shinfo.first_job) {
+                    shinfo.first_job = current_job->next;
                     delete_job(current_job);
-                    current_job = first_job;
+                    current_job = shinfo.first_job;
                 } else if(current_job == tail_job) {
                     tail_job = previous_job;
 

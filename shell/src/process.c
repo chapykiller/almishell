@@ -24,6 +24,7 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
     int i;
     pid_t pid;
     const int std_filenos[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    enum SHELL_CMD cmd;
 
     if(s->interactive) {
         pid = getpid();
@@ -56,14 +57,10 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
         }
     }
 
-    for(i = 0; i < SHELL_CMD_NUM; ++i) {
-        if(!strcmp(p->argv[0], shell_cmd[i])) {
-            i = SHELL_CMD_NUM + 1;
-        }
-    }
-
-    if(i >= SHELL_CMD_NUM + 2) {
-        exit(EXIT_FAILURE);
+    cmd = is_builtin_command(p->argv[0]);
+    if(cmd != SHELL_NONE) {
+        run_builtin_command(s, p->argv, cmd);
+        exit(EXIT_SUCCESS);
     }
 
     execvp(p->argv[0], p->argv);

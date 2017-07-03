@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <termios.h>
 
+/* Forward declaration */
+struct job;
+
 enum SHELL_CMD {
     SHELL_EXIT,
     SHELL_QUIT,
@@ -27,6 +30,8 @@ struct shell_info {
     int run;
     int plusJob;
     int minusJob;
+
+    struct job *first_job;
 };
 
 /* Ensures proper shell initialization, making sure the shell is executed in
@@ -36,5 +41,16 @@ http://www.gnu.org/software/libc/manual/html_node/Initializing-the-Shell.html#In
 struct shell_info init_shell(void);
 
 void delete_shell(struct shell_info *info);
+
+/*  If it's a builtin command, returns its index in the shell_cmd array,
+   else returns -1.
+*/
+enum SHELL_CMD is_builtin_command(const char *cmd);
+
+void run_jobs(struct shell_info *sh);
+
+void fg_bg(struct shell_info *sh, char **args, int id);
+
+void run_builtin_command(struct shell_info *sh, char **args, int id);
 
 #endif /* SHELL_H */
