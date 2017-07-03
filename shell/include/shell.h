@@ -25,6 +25,8 @@ struct shell_info {
     char *current_path;
     struct termios tmodes;
     int run;
+    int plusJob;
+    int minusJob;
 };
 
 /* Ensures proper shell initialization, making sure the shell is executed in
