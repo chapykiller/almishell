@@ -187,6 +187,7 @@ void fg_bg(struct shell_info *sh, char **args, int id)
 
             return;
         }
+        current = current->next;
     }
 
     printf("almishell: %s: %s: no such job\n", args[0], args[1] ? args[1] : "current");
