@@ -145,6 +145,8 @@ int main(int argc, char *argv[])
         previous_job = NULL;
 
         while(current_job) {
+            int deletedHead = 0;
+
             if(job_is_completed(current_job)) {
                 if(current_job->id == shinfo.plusJob) {
                     shinfo.plusJob = shinfo.minusJob;
@@ -159,6 +161,7 @@ int main(int argc, char *argv[])
                     shinfo.first_job = current_job->next;
                     delete_job(current_job);
                     current_job = shinfo.first_job;
+                    deletedHead = 1;
                 } else if(current_job == shinfo.tail_job) {
                     shinfo.tail_job = previous_job;
 
@@ -174,7 +177,7 @@ int main(int argc, char *argv[])
                 }
             }
             previous_job = current_job;
-            if(current_job)
+            if(current_job && !deletedHead)
                 current_job = current_job->next;
         }
 
