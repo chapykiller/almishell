@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
                     shinfo.plusJob = j->id;
                 }
 
-                launch_job(&shinfo, j, shinfo.first_job);
+                launch_job(&shinfo, j);
             }
         } else {
             if(j->first_process && j->first_process->next)

@@ -24,7 +24,6 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
     int i;
     pid_t pid;
     const int std_filenos[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
-    enum SHELL_CMD cmd;
 
     if(s->interactive) {
         pid = getpid();
@@ -57,13 +56,8 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
         }
     }
 
-    cmd = is_builtin_command(p->argv[0]);
-    if(cmd != SHELL_NONE) {
-        run_builtin_command(s, p->argv, cmd);
-        exit(EXIT_SUCCESS);
-    }
-
-    execvp(p->argv[0], p->argv);
+    if(is_builtin_command(p->argv[0]) == SHELL_NONE)
+        execvp(p->argv[0], p->argv);
 
     perror("almishell: execvp");
     exit(EXIT_FAILURE);

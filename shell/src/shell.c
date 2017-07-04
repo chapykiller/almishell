@@ -180,9 +180,9 @@ void fg_bg(struct shell_info *sh, char **args, int id)
                 node_p->p->stopped = 0;
 
             if(id == SHELL_FG)
-                put_job_in_foreground(sh, current, sh->first_job, 1);
+                put_job_in_foreground(sh, current, 1);
             else
-                put_job_in_background(sh, current, sh->first_job, 1);
+                put_job_in_background(current, 1);
 
             return;
         }
@@ -192,7 +192,7 @@ void fg_bg(struct shell_info *sh, char **args, int id)
     printf("almishell: fg: %s: no such job\n", args[1] ? args[1] : "current");
 }
 
-void run_builtin_command(struct shell_info *sh, char **args, int id)
+void run_builtin_command(struct shell_info *sh, FILE *out, char **args, int id)
 {
     switch(id) {
     case SHELL_EXIT:
@@ -220,13 +220,13 @@ void run_builtin_command(struct shell_info *sh, char **args, int id)
         break;
 
     case SHELL_ALMISHELL:
-        printf("\"Os alunos tão latindo Michel, traz a antirábica.\"\n");
-        fflush(stdout);
+        fprintf(out, "\"Os alunos tão latindo Michel, traz a antirábica.\"\n");
+        fflush(out);
         break;
 
     default:
-        printf("almishell: invalid command\n");
-        fflush(stdout);
+        fprintf(out, "almishell: invalid command\n");
+        fflush(out);
         break;
     }
 }

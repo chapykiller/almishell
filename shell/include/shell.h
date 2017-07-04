@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <termios.h>
 
+#include <stdio.h>
+
 /* Forward declaration */
 struct job;
 
@@ -51,6 +53,6 @@ void run_jobs(struct shell_info *sh);
 
 void fg_bg(struct shell_info *sh, char **args, int id);
 
-void run_builtin_command(struct shell_info *sh, char **args, int id);
+void run_builtin_command(struct shell_info *sh, FILE *out, char **args, int id);
 
 #endif /* SHELL_H */

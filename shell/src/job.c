@@ -76,7 +76,7 @@ void signal_continue_job(struct shell_info *s, struct job *j)
         perror("almishell: kill (SIGCONT)");
 }
 
-void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *first_job, int cont)
+void put_job_in_foreground(struct shell_info *s, struct job *j, int cont)
 {
     j->background = 'f';
 
@@ -89,7 +89,7 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *firs
     if(cont)
         signal_continue_job(s, j);
 
-    wait_job(j, first_job);
+    wait_job(j, s->first_job);
 
     /* Give access to the terminal back to the shell */
     tcsetpgrp(s->terminal, s->pgid);
@@ -99,7 +99,7 @@ void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *firs
     tcsetattr(s->terminal, TCSADRAIN, &s->tmodes);
 }
 
-void put_job_in_background(struct shell_info *s, struct job *j, struct job *first_job, int cont)
+void put_job_in_background(struct job *j, int cont)
 {
     j->background = 'b';
 
@@ -109,12 +109,13 @@ void put_job_in_background(struct shell_info *s, struct job *j, struct job *firs
             perror ("almishell: kill (SIGCONT)");
 }
 
-void launch_job (struct shell_info *s, struct job *j, struct job *first_job)
+int launch_job (struct shell_info *s, struct job *j)
 {
     struct process_node *node;
     pid_t pid;
     int mypipe[2];
     int io[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    enum SHELL_CMD cmd;
 
     io[0] = j->io[0];
     for (node = j->first_process; node; node = node->next) {
@@ -130,28 +131,49 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job)
         } else
             io[1] = j->io[1];
 
-        /* Fork the child processes.  */
-        pid = fork ();
-        if (pid == 0)
-            /* This is the child process.  */
-            run_process(s, node->p, j->pgid, io, j->background);
-        else if (pid < 0) {
-            /* The fork failed.  */
-            perror ("almishell: fork");
-            exit (1);
+        cmd = is_builtin_command(node->p->argv[0]);
+
+        if(cmd == SHELL_NONE) {
+            /* Fork the child processes.  */
+            pid = fork ();
+            if (pid == 0)
+                /* This is the child process.  */
+                run_process(s, node->p, j->pgid, io, j->background);
+            else if (pid < 0) {
+                /* The fork failed.  */
+                perror ("almishell: fork");
+                exit (EXIT_FAILURE);
+            } else {
+                /* This is the parent process.  */
+                node->p->pid = pid;
+                if (s->interactive) {
+                    if (!j->pgid)
+                        j->pgid = pid;
+                    setpgid (pid, j->pgid);
+                }
+            }
         } else {
-            /* This is the parent process.  */
-            node->p->pid = pid;
-            if (s->interactive) {
-                if (!j->pgid)
-                    j->pgid = pid;
-                setpgid (pid, j->pgid);
+            FILE *out = io[1] == STDOUT_FILENO ? stdout : fdopen(io[1], "w");
+
+            run_builtin_command(s, out, node->p->argv, cmd);
+            node->p->completed = 1;
+
+            if(out != stdout) {
+                fclose(out);
+                io[1] = STDOUT_FILENO;
+            }
+
+            if(cmd == SHELL_EXIT || cmd == SHELL_QUIT) {
+                node = NULL;
+                io[1] = STDOUT_FILENO;
+                break;
             }
         }
 
         /* Clean up after pipes. */
         if(node->next) {
-            close(io[1]);
+            if(io[1] != STDOUT_FILENO)
+                close(io[1]);
 
             if(node != j->first_process)
                 close(io[0]);
@@ -167,13 +189,18 @@ void launch_job (struct shell_info *s, struct job *j, struct job *first_job)
     if(io[1] != STDOUT_FILENO)
         close(io[1]);
 
+    if(!j->pgid) /* If the pipeline is composed of only built-in commands */
+        return 0;
+
     if (!s->interactive) {
-        wait_job (j, first_job);
+        wait_job (j, s->first_job);
     } else if (j->background == 'f') {
-        put_job_in_foreground(s, j, first_job, 0);
+        put_job_in_foreground(s, j, 0);
     } else {
-        put_job_in_background(s, j, first_job, 0);
+        put_job_in_background(j, 0);
     }
+
+    return 1;
 }
 
 int check_processes(struct job *j)

@@ -29,11 +29,11 @@ void delete_job(struct job *j);
 
 void wait_job(struct job *j, struct job *first_job);
 
-void put_job_in_foreground(struct shell_info *s, struct job *j, struct job *first_job, int cont);
+void put_job_in_foreground(struct shell_info *s, struct job *j, int cont);
 
-void put_job_in_background(struct shell_info *s, struct job *j, struct job *first_job, int cont);
+void put_job_in_background(struct job *j, int cont);
 
-void launch_job(struct shell_info *s, struct job *j, struct job *first_job);
+int launch_job(struct shell_info *s, struct job *j);
 
 int check_processes(struct job *j);
 
