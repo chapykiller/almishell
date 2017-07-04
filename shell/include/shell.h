@@ -33,7 +33,7 @@ struct shell_info {
     int plusJob;
     int minusJob;
 
-    struct job *first_job;
+    struct job *first_job, *tail_job;
 };
 
 /* Ensures proper shell initialization, making sure the shell is executed in

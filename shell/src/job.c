@@ -183,6 +183,19 @@ int launch_job (struct shell_info *s, struct job *j)
         }
     }
 
+    j->id = s->tail_job ? s->tail_job->id+1 : 1;
+
+    if(!s->first_job) {
+        s->first_job = s->tail_job = j;
+        s->minusJob = s->plusJob = 1;
+    } else {
+        s->tail_job->next = j;
+        s->tail_job = j;
+
+        s->minusJob = s->plusJob;
+        s->plusJob = j->id;
+    }
+
     if(io[0] != STDIN_FILENO)
         close(io[0]);
 

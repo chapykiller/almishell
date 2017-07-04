@@ -62,6 +62,7 @@ struct shell_info init_shell()
 
     info.run = 1;
     info.first_job = NULL;
+    info.tail_job = NULL;
 
     return info;
 }

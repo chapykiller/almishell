@@ -88,9 +88,9 @@ int main(int argc, char *argv[])
     FILE *input = stdin;
 
     struct shell_info shinfo = init_shell();
-    struct job *tail_job, *current_job, *previous_job;
+    struct job *current_job, *previous_job;
 
-    shinfo.first_job = tail_job = NULL;
+    shinfo.first_job = shinfo.tail_job = NULL;
 
     if(argc > 1) {
         if(strcmp(argv[1], "--command") == 0 || strcmp(argv[1], "-c") == 0) {
@@ -134,19 +134,6 @@ int main(int argc, char *argv[])
             if(!j) {
                 printf("almishell: syntax error\n");
             } else {
-                j->id = tail_job ? tail_job->id+1 : 1;
-
-                if(!shinfo.first_job) {
-                    shinfo.first_job = tail_job = j;
-                    shinfo.minusJob = shinfo.plusJob = 1;
-                } else {
-                    tail_job->next = j;
-                    tail_job = j;
-
-                    shinfo.minusJob = shinfo.plusJob;
-                    shinfo.plusJob = j->id;
-                }
-
                 launch_job(&shinfo, j);
             }
         } else {
@@ -164,16 +151,16 @@ int main(int argc, char *argv[])
                 } else if(current_job->id == shinfo.minusJob) {
                     shinfo.minusJob = shinfo.plusJob;
                 }
-                if(shinfo.first_job == tail_job) {
+                if(shinfo.first_job == shinfo.tail_job) {
                     delete_job(current_job);
-                    current_job = shinfo.first_job = tail_job = NULL;
+                    current_job = shinfo.first_job = shinfo.tail_job = NULL;
                     shinfo.plusJob = shinfo.minusJob = 0;
                 } else if(current_job == shinfo.first_job) {
                     shinfo.first_job = current_job->next;
                     delete_job(current_job);
                     current_job = shinfo.first_job;
-                } else if(current_job == tail_job) {
-                    tail_job = previous_job;
+                } else if(current_job == shinfo.tail_job) {
+                    shinfo.tail_job = previous_job;
 
                     delete_job(current_job);
 
@@ -183,6 +170,7 @@ int main(int argc, char *argv[])
                 } else {
                     previous_job->next = current_job->next;
                     delete_job(current_job);
+                    current_job = previous_job;
                 }
             }
             previous_job = current_job;
@@ -196,6 +184,14 @@ int main(int argc, char *argv[])
             command_line = NULL;
         }
     } while(shinfo.run);
+
+    current_job = shinfo.first_job;
+
+    while(current_job) {
+        struct job *temp = current_job;
+        current_job = current_job->next;
+        delete_job(temp);
+    }
 
     delete_shell(&shinfo);
 
