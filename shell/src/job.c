@@ -210,6 +210,7 @@ int launch_job (struct shell_info *s, struct job *j)
     } else if (j->background == 'f') {
         put_job_in_foreground(s, j, 0);
     } else {
+        tcgetattr(s->terminal, &j->tmodes); /* Set up defualt terminal mode */
         put_job_in_background(j, 0);
     }
 
