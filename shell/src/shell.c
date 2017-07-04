@@ -164,7 +164,7 @@ void fg_bg(struct shell_info *sh, char **args, int id)
     }
 
     if(i < 1) {
-        printf("almishell: fg: %s: no such job\n", args[1] ? args[1] : "current");
+        printf("almishell: %s: %s: no such job\n", args[0], args[1] ? args[1] : "current");
         return;
     }
 
@@ -189,8 +189,7 @@ void fg_bg(struct shell_info *sh, char **args, int id)
         }
     }
 
-
-    printf("almishell: fg: %s: no such job\n", args[1] ? args[1] : "current");
+    printf("almishell: %s: %s: no such job\n", args[0], args[1] ? args[1] : "current");
 }
 
 void run_builtin_command(struct shell_info *sh, FILE *out, char **args, int id)
