@@ -30,8 +30,6 @@ struct shell_info {
     char *current_path;
     struct termios tmodes;
     int run;
-    int plusJob;
-    int minusJob;
 
     struct job *first_job, *tail_job;
 };

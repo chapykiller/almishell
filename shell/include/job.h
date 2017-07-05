@@ -21,6 +21,7 @@ struct job {
     size_t size;
     struct job *next;
     int io[3];
+    int priority;
 };
 
 struct job *init_job(char *command_line, char background);

@@ -16,6 +16,7 @@ struct job *init_job(char *command_line, char background)
     j->first_process = NULL;
     j->pgid = 0;
     j->size = 0;
+    j->priority = 0;
 
     memcpy(j->io, io, sizeof(int) * 3);
 
@@ -187,13 +188,20 @@ int launch_job (struct shell_info *s, struct job *j)
 
     if(!s->first_job) {
         s->first_job = s->tail_job = j;
-        s->minusJob = s->plusJob = 1;
+        s->first_job->priority = 1;
     } else {
+        struct job *curJob = s->first_job;
+        int maxPriority = 0;
+
+        while(curJob) {
+            maxPriority = curJob->priority > maxPriority ? curJob->priority : maxPriority;
+
+            curJob = curJob->next;
+        }
+        j->priority = maxPriority+1;
+
         s->tail_job->next = j;
         s->tail_job = j;
-
-        s->minusJob = s->plusJob;
-        s->plusJob = j->id;
     }
 
     if(io[0] != STDIN_FILENO)

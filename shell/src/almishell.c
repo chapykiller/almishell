@@ -148,15 +148,18 @@ int main(int argc, char *argv[])
             int deletedHead = 0;
 
             if(job_is_completed(current_job)) {
-                if(current_job->id == shinfo.plusJob) {
-                    shinfo.plusJob = shinfo.minusJob;
-                } else if(current_job->id == shinfo.minusJob) {
-                    shinfo.minusJob = shinfo.plusJob;
+                struct job *curJob = shinfo.first_job;
+                while(curJob) {
+                    if(curJob->priority > current_job->priority) {
+                        --curJob->priority;
+                    }
+
+                    curJob = curJob->next;
                 }
+
                 if(shinfo.first_job == shinfo.tail_job) {
                     delete_job(current_job);
                     current_job = shinfo.first_job = shinfo.tail_job = NULL;
-                    shinfo.plusJob = shinfo.minusJob = 0;
                 } else if(current_job == shinfo.first_job) {
                     shinfo.first_job = current_job->next;
                     delete_job(current_job);

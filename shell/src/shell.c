@@ -123,11 +123,27 @@ enum SHELL_CMD is_builtin_command(const char *cmd)
 void run_jobs(struct shell_info *sh)
 {
     struct job *it = sh->first_job;
+    struct job *curJob, *minusJob, *plusJob;
+    curJob = plusJob = minusJob = sh->first_job;
 
     update_status(sh->first_job);
 
+    while(curJob) {
+        if(curJob->priority > plusJob->priority) {
+            if(curJob->priority == plusJob->priority+1) {
+                minusJob = plusJob;
+            }
+            plusJob = curJob;
+        }
+        else if(curJob->priority == plusJob->priority - 1) {
+            minusJob = curJob;
+        }
+
+        curJob = curJob->next;
+    }
+
     while(it) {
-        printf("[%d]%c  ", it->id, (sh->plusJob==it->id ? '+' : (sh->minusJob==it->id ? '-' : ' ')));
+        printf("[%d]%c  ", it->id, (plusJob->id==it->id ? '+' : (minusJob->id==it->id ? '-' : ' ')));
 
         if(job_is_completed(it)) {
             struct process_node *last = it->first_process;
@@ -156,9 +172,17 @@ void fg_bg(struct shell_info *sh, char **args, int id)
     int i;
     struct job *current;
     struct process_node *node_p;
+    struct job *curJob, *maxPriority;
+    curJob = maxPriority = sh->first_job;
+
+    while(curJob) {
+        maxPriority = curJob->priority > maxPriority->priority ? curJob : maxPriority;
+
+        curJob = curJob->next;
+    }
 
     if(!args[1]) {
-        i = sh->plusJob;
+        i = maxPriority->id;
     } else {
         i = atoi(args[1]);
     }
@@ -171,9 +195,17 @@ void fg_bg(struct shell_info *sh, char **args, int id)
     current = sh->first_job;
     while(current) {
         if(current->id == i) {
-            if(sh->plusJob != i)
-                sh->minusJob = sh->plusJob;
-            sh->plusJob = i;
+            int max = maxPriority->priority;
+            curJob = sh->first_job;
+            while(curJob) {
+                if(curJob->priority > current->priority) {
+                    --curJob->priority;
+                }
+
+                curJob = curJob->next;
+            }
+
+            current->priority = max;
 
             printf("%s\n", current->command);
 
