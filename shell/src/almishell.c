@@ -36,8 +36,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 
-#include <readline/readline.h>
-
 void print_prompt(const char *path)
 {
     const char *prompt_str = "$ ";
