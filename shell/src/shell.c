@@ -258,6 +258,7 @@ void run_builtin_command(struct shell_info *sh, FILE *out, char **args, int id)
 
             free(sh->current_path);
             sh->current_path = getcwd(NULL, 0);
+            setenv("PWD", sh->current_path, 1);
         }
         break;
 
