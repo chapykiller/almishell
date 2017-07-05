@@ -42,6 +42,7 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
     int i;
     pid_t pid;
     const int std_filenos[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    struct sigaction sact;
 
     if(s->interactive) {
         pid = getpid();
@@ -56,12 +57,15 @@ void run_process(struct shell_info *s, struct process *p, pid_t pgid, int io[3],
             tcsetpgrp(s->terminal, pgid);
 
         /* Set the handling for job control signals back to the default. */
-        signal (SIGINT, SIG_DFL);
-        signal (SIGQUIT, SIG_DFL);
-        signal (SIGTSTP, SIG_DFL);
-        signal (SIGTTIN, SIG_DFL);
-        signal (SIGTTOU, SIG_DFL);
-        signal (SIGCHLD, SIG_DFL);
+        sact.sa_handler = SIG_DFL;
+        sigemptyset(&sact.sa_mask);
+        sact.sa_flags = 0;
+        sigaction(SIGINT, &sact, NULL);
+        sigaction(SIGQUIT, &sact, NULL);
+        sigaction(SIGTSTP, &sact, NULL);
+        sigaction(SIGTTIN, &sact, NULL);
+        sigaction(SIGTTOU, &sact, NULL);
+        sigaction(SIGCHLD, &sact, NULL);
     }
 
     /* Set the standard input/output channels of the new process.  */
