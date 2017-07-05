@@ -1,9 +1,0 @@
-Em virtude do número relativamente pequeno de grupos e de não termos tido aula dia 21/06, 
-adiaremos a entrega final do projeto bem como as apresentações para o dia 05/07. Teremos aula
-normalmente dia 28/06, para que os grupos possam terminar de tirar as dúvidas pessoalmente.
-
-Após as apresentações, será aplicada uma breve prova com relação ao projeto, que valerá
-até um ponto extra na nota final.
-
-A nota final será calculada com base no exercício "runcmd" com peso 30% e no projeto do 
-shell, com peso 70%, e o ponto extra da prova supracitada.
